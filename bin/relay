@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Demo\Outbox\OutboxRelay;
+use Demo\Relay\RelayKernelFactory;
+use Psr\Log\LoggerInterface;
+use Slimfony\Core\Config\Env;
+use Slimfony\Core\Worker\ConsumerRunner;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$kernel = new RelayKernelFactory(Env::fromGlobals(), dirname(__DIR__))->create();
+$logger = $kernel->get(LoggerInterface::class);
+$relay = $kernel->get(OutboxRelay::class);
+assert($logger instanceof LoggerInterface && $relay instanceof OutboxRelay);
+
+$logger->info('Outbox relay started');
+
+// Stops on SIGTERM after the batch in progress; leaves (and is restarted by the container) when it grows past 64 MiB.
+new ConsumerRunner($kernel, $logger, maxMemoryBytes: 64 * 1024 * 1024)->run(static function () use ($relay, $logger): bool {
+    try {
+        $published = $relay->relayOnce();
+    } catch (Throwable $e) {
+        $logger->error('Relaying failed, trying again in a second', ['exception' => $e]);
+        sleep(1);
+
+        return true;
+    }
+    if (0 === $published) {
+        usleep(200_000); // nothing to do
+    } else {
+        $logger->info('Published outbox messages', ['count' => $published]);
+    }
+
+    return true;
+});

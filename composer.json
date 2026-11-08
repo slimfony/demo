@@ -9,6 +9,7 @@
         "php": "^8.4",
         "ext-apcu": "*",
         "ext-pdo_pgsql": "*",
+        "basis-company/nats": "^1.2",
         "firebase/php-jwt": "^7.2",
         "slimfony/core": "^0.3.0"
     },
