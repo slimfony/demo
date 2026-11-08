@@ -38,5 +38,14 @@ curl -sf -H "Authorization: Bearer $(token valid)" "$base/api/batches/$id" | gre
 [ "$(status -X POST --data-binary @"$zip" $base/public/drop)" = 202 ] || fail "the public sandbox must accept a small ZIP"
 [ "$(status -X POST --data 'not a zip' $base/public/drop)" = 422 ] || fail "the public sandbox must refuse a file that is not a ZIP"
 
+# the relay publishes the outbox to NATS: wait until nothing is left unpublished and the stream holds the messages
+for _ in $(seq 1 30); do
+  pending=$(docker compose exec -T postgres psql -U demo -d demo -tAc 'SELECT count(*) FROM outbox WHERE published_at IS NULL')
+  [ "$pending" = 0 ] && break
+  sleep 1
+done
+[ "$pending" = 0 ] || fail "the relay did not publish the outbox"
+docker compose exec -T nats wget -qO- 'http://127.0.0.1:8222/jsz?streams=true' | grep -Eq '"messages": *[1-9]' || fail "the NATS stream holds no messages"
+
 echo "e2e ok"
 docker compose down -v

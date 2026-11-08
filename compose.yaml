@@ -115,6 +115,37 @@ services:
       start_period: 5s
     mem_limit: 256m
 
+  # Publishes the outbox rows to NATS JetStream. Same image as the api, a command line process instead of a web server.
+  relay:
+    <<: *service
+    image: slimfony-demo:dev
+    command: ["php", "bin/relay"]
+    healthcheck:
+      disable: true # the image's own check probes the web server; this process is its only process: if it dies, the container does
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    environment:
+      LOG_LEVEL: info
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_NAME: demo
+      DB_USER: demo
+      DB_PASSWORD_FILE: /secrets/db_password
+      NATS_HOST: nats
+    volumes:
+      - secrets:/secrets:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+
   web:
     <<: *service
     build:

@@ -26,9 +26,11 @@ RUN composer install --no-dev --no-interaction --no-progress --no-scripts --clas
 COPY src ./src
 COPY config ./config
 COPY public ./public
+COPY bin ./bin
 RUN composer dump-autoload --no-dev --no-interaction --classmap-authoritative \
     && vendor/bin/slimfony warmup config/api/services.php config/api/routes.php var/cache/api \
-    && vendor/bin/slimfony warmup config/idp/services.php config/idp/routes.php var/cache/idp
+    && vendor/bin/slimfony warmup config/idp/services.php config/idp/routes.php var/cache/idp \
+    && vendor/bin/slimfony warmup config/relay/services.php config/relay/routes.php var/cache/relay
 
 # ---- runtime: only what is needed to run
 FROM base AS runtime
