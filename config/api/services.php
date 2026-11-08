@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Demo\Api\Controller\BatchController;
+use Demo\Api\Controller\BatchListController;
+use Demo\Api\Controller\DemoRotateController;
 use Demo\Api\Controller\DemoTokenController;
+use Demo\Api\Controller\ImportSummaryController;
 use Demo\Api\Controller\RuntimeController;
 use Demo\Api\Controller\SampleArchiveController;
 use Demo\Api\Controller\StatsController;
@@ -93,6 +96,9 @@ return static function (ContainerBuilder $c): void {
     $c->register(BatchController::class)->setAutowired(true);
     $c->register(TokenSource::class, HttpTokenSource::class)->setArguments(['%env(IDP_URL)%']);
     $c->register(DemoTokenController::class)->setAutowired(true);
+    $c->register(DemoRotateController::class)->setAutowired(true);
+    $c->register(ImportSummaryController::class)->setAutowired(true);
+    $c->register(BatchListController::class)->setAutowired(true);
     $c->register(StatementGenerator::class);
     $c->register(SampleArchiveController::class)->setAutowired(true);
 };

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Demo\Tests\Idp;
 
+use Demo\Idp\InMemoryKeySet;
 use Demo\Idp\SigningKey;
 use Demo\Idp\TokenIssuer;
 use Demo\Idp\TokenKind;
@@ -23,7 +24,7 @@ final class TokenIssuerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->issuer = new TokenIssuer(SigningKey::generate(), 'https://idp.test', 'demo-api');
+        $this->issuer = new TokenIssuer(new InMemoryKeySet(SigningKey::generate()), 'https://idp.test', 'demo-api');
         // the verifier learns the key from the published JWKS document, exactly as the api does
         $keys = JWK::parseKeySet($this->issuer->jwks(), 'EdDSA');
         $this->authenticator = new JwtAuthenticator(

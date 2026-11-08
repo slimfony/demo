@@ -33,6 +33,45 @@ final class BatchRepository
     }
 
     /**
+     * Counts for the page: batches by state and by way in, statements and entries, and why statements were turned away.
+     *
+     * @return array<string, mixed>
+     */
+    public function summary(Connection $connection): array
+    {
+        $counts = $connection->fetchAssociative(
+            "SELECT count(*) FILTER (WHERE status = 'queued') AS queued, count(*) FILTER (WHERE status = 'running') AS running,
+                count(*) FILTER (WHERE status = 'done') AS done, count(*) FILTER (WHERE status = 'failed') AS failed,
+                count(*) FILTER (WHERE source = 'jwt') AS with_token, count(*) FILTER (WHERE source = 'public') AS sandbox,
+                coalesce(sum(statements_ok), 0) AS statements_booked, coalesce(sum(statements_failed), 0) AS statements_failed,
+                coalesce(sum(entries_booked), 0) AS entries_booked FROM batches",
+        );
+        $batches = [];
+        foreach (false === $counts ? [] : $counts as $name => $value) {
+            $batches[$name] = is_numeric($value) ? (int) $value : 0;
+        }
+        $reasons = [];
+        foreach ($connection->fetchAllAssociative('SELECT reason, count(*) AS n FROM import_errors GROUP BY reason ORDER BY n DESC') as $row) {
+            if (\is_string($row['reason']) && is_numeric($row['n'])) {
+                $reasons[$row['reason']] = (int) $row['n'];
+            }
+        }
+
+        return ['batches' => $batches, 'rejected_by_reason' => $reasons];
+    }
+
+    /**
+     * @return list<array<string, mixed>> the latest batches, newest first, without data, sender and key id
+     */
+    public function recent(Connection $connection, int $limit): array
+    {
+        return $connection->fetchAllAssociative(
+            'SELECT id, status, source, mode, entries AS files, statements_ok, statements_failed, entries_booked, worker, created_at, started_at, finished_at FROM batches ORDER BY created_at DESC LIMIT ?',
+            [$limit],
+        );
+    }
+
+    /**
      * @return array<string, mixed>|null the batch without its data
      */
     public function find(Connection $connection, string $id): ?array

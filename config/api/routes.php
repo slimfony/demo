@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Demo\Api\Controller\BatchController;
+use Demo\Api\Controller\BatchListController;
+use Demo\Api\Controller\DemoRotateController;
 use Demo\Api\Controller\DemoTokenController;
+use Demo\Api\Controller\ImportSummaryController;
 use Demo\Api\Controller\RuntimeController;
 use Demo\Api\Controller\SampleArchiveController;
 use Demo\Api\Controller\StatsController;
@@ -27,6 +30,11 @@ return static function (RouteCollection $r): void {
     $r->add('api_stats', new Route('/api/stats', $public(StatsController::class), methods: ['GET']));
     $r->add('api_sample', new Route('/api/sample.zip', $public(SampleArchiveController::class), methods: ['GET']));
     $r->add('api_demo_token', new Route('/api/demo-token', $public(DemoTokenController::class), methods: ['POST']));
+
+    $r->add('api_demo_rotate', new Route('/api/demo-rotate', $public(DemoRotateController::class), methods: ['POST']));
+
+    $r->add('api_import_summary', new Route('/api/import/summary', $public(ImportSummaryController::class), methods: ['GET']));
+    $r->add('api_batch_list', new Route('/api/batches', $public(BatchListController::class), methods: ['GET']));
 
     // Two ways in: with a token (the caller is known) and anonymously (sandbox with tighter limits).
     $r->add('import_upload', new Route('/api/imports', ['_controller' => UploadController::class, '_source' => 'jwt', '_scopes' => ['import:write']], methods: ['POST']));

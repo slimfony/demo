@@ -19,7 +19,7 @@ final class TokenIssuer
      * @param (\Closure(): int)|null $now defaults to time()
      */
     public function __construct(
-        private readonly SigningKey $key,
+        private readonly KeySet $keys,
         private readonly string $issuer,
         private readonly string $audience,
         ?\Closure $now = null,
@@ -39,9 +39,16 @@ final class TokenIssuer
             'jti' => bin2hex(random_bytes(8)),
             'scope' => TokenKind::MissingScope === $kind ? 'profile' : self::SCOPE,
         ];
-        $secret = TokenKind::BadSignature === $kind ? SigningKey::generate()->secretKey : $this->key->secretKey; // same key id, someone else's key
+        $key = $this->keys->current();
+        $secret = TokenKind::BadSignature === $kind ? SigningKey::generate()->secretKey : $key->secretKey; // same key id, someone else's key
 
-        return JWT::encode($claims, base64_encode($secret), 'EdDSA', $this->key->id);
+        return JWT::encode($claims, base64_encode($secret), 'EdDSA', $key->id);
+    }
+
+    /** Starts signing with a new key; the previous one stays published for the tokens it signed. */
+    public function rotate(): SigningKey
+    {
+        return $this->keys->rotate();
     }
 
     /**
@@ -49,13 +56,13 @@ final class TokenIssuer
      */
     public function jwks(): array
     {
-        return ['keys' => [[
+        return ['keys' => array_map(static fn(SigningKey $key): array => [
             'kty' => 'OKP',
             'crv' => 'Ed25519',
             'use' => 'sig',
             'alg' => 'EdDSA',
-            'kid' => $this->key->id,
-            'x' => rtrim(strtr(base64_encode($this->key->publicKey), '+/', '-_'), '='),
-        ]]];
+            'kid' => $key->id,
+            'x' => rtrim(strtr(base64_encode($key->publicKey), '+/', '-_'), '='),
+        ], $this->keys->all())];
     }
 }

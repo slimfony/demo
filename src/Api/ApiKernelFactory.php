@@ -57,7 +57,7 @@ final class ApiKernelFactory
         $this->env->string('IDP_URL');
         $authenticator = new JwtAuthenticator(
             new JwtConfiguration($this->env->string('JWT_ISSUER'), $this->env->string('JWT_AUDIENCE'), ['EdDSA']), // only the algorithm the identity provider signs with
-            new JwksKeyProvider($this->env->string('JWKS_URI'), $logger),
+            new JwksKeyProvider($this->env->string('JWKS_URI'), $logger, minRefetchSeconds: 2), // a new key id is looked up at once (at most every two seconds)
             $logger,
         );
 

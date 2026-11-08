@@ -32,6 +32,15 @@ final class HttpTokenSource implements TokenSource
         return \is_string($token) ? $token : throw new \RuntimeException('The identity provider returned no token.');
     }
 
+    #[\Override]
+    public function rotate(): string
+    {
+        $body = json_decode(($this->post)($this->baseUrl . '/rotate'), true);
+        $kid = \is_array($body) ? ($body['kid'] ?? null) : null;
+
+        return \is_string($kid) ? $kid : throw new \RuntimeException('The identity provider returned no key id.');
+    }
+
     private static function request(string $url): string
     {
         $context = stream_context_create([

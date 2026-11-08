@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Demo\Tests\Api;
 
+use Demo\Idp\InMemoryKeySet;
 use Demo\Idp\SigningKey;
 use Demo\Idp\TokenIssuer;
 use Demo\Idp\TokenKind;
@@ -55,11 +56,12 @@ final class ApiKernelTest extends TestCase
         $metrics = new MetricsRegistry(new InMemoryStorage());
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP, worker TEXT, started_at TEXT, finished_at TEXT, statements_ok INTEGER DEFAULT 0, statements_failed INTEGER DEFAULT 0, entries_booked INTEGER DEFAULT 0)');
+        $connection->executeStatement('CREATE TABLE import_errors (reason TEXT)');
         $connection->executeStatement('CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, payload TEXT, published_at TEXT)');
         $context = new RequestContext();
 
         // the identity provider's key is known to the verifier, as the JWKS download would make it
-        $this->idp = new TokenIssuer(SigningKey::generate(), 'https://idp.test', 'demo-api');
+        $this->idp = new TokenIssuer(new InMemoryKeySet(SigningKey::generate()), 'https://idp.test', 'demo-api');
         $authenticator = new JwtAuthenticator(new JwtConfiguration('https://idp.test', 'demo-api', ['EdDSA']), new StaticKeyProvider(JWK::parseKeySet($this->idp->jwks(), 'EdDSA')), cacheSeconds: 0);
 
         return new Kernel(
@@ -172,6 +174,25 @@ final class ApiKernelTest extends TestCase
         self::assertSame(429, $limited->getStatusCode());
         self::assertNotNull($limited->headers->get('Retry-After'));
         self::assertSame(202, $this->post($kernel, '/api/imports', $zip, TokenKind::Valid)->getStatusCode());
+    }
+
+    public function testTheBatchListAndTheSummaryArePublicAndLeakNoSender(): void
+    {
+        $kernel = $this->kernel();
+        $this->post($kernel, '/api/imports', ArchiveInspectorTest::zip(['a.xml' => '<x/>']), TokenKind::Valid);
+
+        $list = $kernel->handle(Request::create('/api/batches'));
+        self::assertSame(200, $list->getStatusCode());
+        self::assertStringContainsString('"source":"jwt"', (string) $list->getContent());
+        self::assertStringNotContainsString('demo-client', (string) $list->getContent());
+        self::assertStringNotContainsString('token_kid', (string) $list->getContent());
+
+        $summary = $kernel->handle(Request::create('/api/import/summary'));
+        self::assertSame(200, $summary->getStatusCode());
+        $body = json_decode((string) $summary->getContent(), true, 8, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['batches']);
+        self::assertSame(['queued' => 1, 'with_token' => 1], array_intersect_key($body['batches'], ['queued' => 0, 'with_token' => 0]));
     }
 
     public function testTheSandboxRouteIsOpenButLooksInsideTheFile(): void

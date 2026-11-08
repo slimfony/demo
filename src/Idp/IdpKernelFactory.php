@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Demo\Idp;
 
 use Demo\Idp\Controller\JwksController;
+use Demo\Idp\Controller\RotateController;
 use Demo\Idp\Controller\TokenController;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Config\Env;
@@ -24,7 +25,8 @@ final class IdpKernelFactory
     {
         $context = new RequestContext();
         $logger = new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context);
-        $issuer = new TokenIssuer(new ApcuKeyStore()->load(), $this->env->string('JWT_ISSUER'), $this->env->string('JWT_AUDIENCE'));
+        $keys = new ApcuKeyStore();
+        $issuer = new TokenIssuer($keys, $this->env->string('JWT_ISSUER'), $this->env->string('JWT_AUDIENCE'));
 
         return new Kernel(
             $this->projectDir . '/config/idp/services.php',
@@ -37,6 +39,7 @@ final class IdpKernelFactory
                 RequestContext::class => $context,
                 JwksController::class => new JwksController($issuer),
                 TokenController::class => new TokenController($issuer),
+                RotateController::class => new RotateController($keys),
             ],
         );
     }

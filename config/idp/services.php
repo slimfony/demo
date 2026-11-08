@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Demo\Idp\Controller\JwksController;
+use Demo\Idp\Controller\RotateController;
 use Demo\Idp\Controller\TokenController;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Health\LivenessController;
@@ -18,6 +19,7 @@ return static function (ContainerBuilder $c): void {
     $c->register(RequestContext::class)->setSynthetic(true)->setPublic(true)->addTag(ResetPass::TAG);
     $c->register(JwksController::class)->setSynthetic(true)->setPublic(true); // they hold the signing key: built at boot
     $c->register(TokenController::class)->setSynthetic(true)->setPublic(true);
+    $c->register(RotateController::class)->setSynthetic(true)->setPublic(true);
 
     $c->register(RequestIdMiddleware::class)->setAutowired(true);
     $c->register(SecurityHeadersMiddleware::class);
