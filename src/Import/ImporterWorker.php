@@ -6,6 +6,7 @@ namespace Demo\Import;
 
 use Basis\Nats\Consumer\Consumer;
 use Basis\Nats\Message\Payload;
+use Demo\Events\EventPublisher;
 use Demo\Relay\MetricsEndpoint;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Observability\Counter;

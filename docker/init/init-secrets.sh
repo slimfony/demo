@@ -8,7 +8,7 @@ if [ -f .ready ]; then
 fi
 umask 022
 generate() { head -c 48 /dev/urandom | base64 | tr -d '=+/\n' | head -c 40; }
-for name in db_password metrics_token grafana_password; do
+for name in db_password metrics_token grafana_password mercure_key; do
   printf '%s' "$(generate)" > "$name"
 done
 printf '"demo" "%s"\n' "$(cat db_password)" > pgbouncer_userlist.txt

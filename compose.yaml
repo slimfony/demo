@@ -144,6 +144,8 @@ services:
       DB_PASSWORD_FILE: /secrets/db_password
       NATS_HOST: nats
       METRICS_TOKEN_FILE: /secrets/metrics_token
+      MERCURE_URL: http://web:8080/.well-known/mercure
+      MERCURE_KEY_FILE: /secrets/mercure_key
     volumes:
       - secrets:/secrets:ro
     read_only: true
@@ -178,6 +180,8 @@ services:
       DB_PASSWORD_FILE: /secrets/db_password
       NATS_HOST: nats
       METRICS_TOKEN_FILE: /secrets/metrics_token
+      MERCURE_URL: http://web:8080/.well-known/mercure
+      MERCURE_KEY_FILE: /secrets/mercure_key
     volumes:
       - secrets:/secrets:ro
     read_only: true

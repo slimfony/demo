@@ -6,6 +6,9 @@ namespace Demo\Relay;
 
 use Basis\Nats\Client;
 use Basis\Nats\Configuration;
+use Demo\Events\NullEventPublisher;
+use Demo\Infrastructure\Mercure\MercurePublisher;
+use Demo\Infrastructure\Mercure\TeeLogger;
 use Demo\Infrastructure\Nats\NatsMessagePublisher;
 use Demo\Infrastructure\Nats\StreamProvisioner;
 use Demo\Outbox\OutboxRelay;
@@ -34,7 +37,10 @@ final class RelayKernelFactory
     public function create(): Kernel
     {
         $context = new RequestContext();
-        $logger = new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context);
+        // events and the log view go to the page through the Mercure hub of the web server (off when no hub is configured)
+        $hub = $this->env->string('MERCURE_URL', '');
+        $events = '' === $hub ? new NullEventPublisher() : new MercurePublisher($hub, $this->env->string('MERCURE_KEY'));
+        $logger = new TeeLogger(new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context), $events, 'relay');
         $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: true, applicationName: 'demo-relay');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger);

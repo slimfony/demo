@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Demo\Import;
+namespace Demo\Events;
 
 final class NullEventPublisher implements EventPublisher
 {

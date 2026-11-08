@@ -9,6 +9,9 @@ use Basis\Nats\Configuration;
 use Basis\Nats\Consumer\AckPolicy;
 use Demo\Camt\CamtParser;
 use Demo\Camt\StatementRules;
+use Demo\Events\NullEventPublisher;
+use Demo\Infrastructure\Mercure\MercurePublisher;
+use Demo\Infrastructure\Mercure\TeeLogger;
 use Demo\Infrastructure\Nats\StreamProvisioner;
 use Demo\Relay\MetricsEndpoint;
 use Doctrine\DBAL\Connection;
@@ -44,7 +47,10 @@ final class ImporterKernelFactory
         $worker = (string) gethostname();
         $context = new RequestContext();
         $metrics = new MetricsRegistry(new ApcuStorage());
-        $logger = new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context);
+        // events and the log view go to the page through the Mercure hub of the web server (off when no hub is configured)
+        $hub = $this->env->string('MERCURE_URL', '');
+        $events = '' === $hub ? new NullEventPublisher() : new MercurePublisher($hub, $this->env->string('MERCURE_KEY'));
+        $logger = new TeeLogger(new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context), $events, 'importer');
         $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: true, applicationName: 'demo-importer');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger, retries: $metrics->counter('db_retries_total', 'Database operations that were retried (deadlocks, lost connections).', ['reason']));
@@ -68,7 +74,6 @@ final class ImporterKernelFactory
         $consumer->create();
 
         $endpoint = new MetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
-        $events = new NullEventPublisher();
         $importerWorker = new ImporterWorker(
             $consumer,
             $importer,

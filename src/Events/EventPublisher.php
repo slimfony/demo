@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Demo\Import;
+namespace Demo\Events;
 
 /** Tells whoever is watching (the page) what the importers are doing. Losing an event must never stop an import. */
 interface EventPublisher

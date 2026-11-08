@@ -79,8 +79,18 @@
 	}
 }
 
-# plain HTTP for a quick local look
+# plain HTTP for a quick local look. The one Mercure hub lives here: live events for the page. Only the services that hold
+# the key can publish; anybody may subscribe (what it carries is what the demo shows on the page anyway).
 :8080 {
+	@events path /.well-known/mercure
+	handle @events {
+		mercure {
+			publisher_jwt {file./secrets/mercure_key}
+			anonymous
+			transport local
+			protocol_version_compatibility 8 # the key is a shared secret; the newer mode wants a JWKS issuer
+		}
+	}
 	import app
 }
 
@@ -88,5 +98,11 @@
 localhost:8443 {
 	tls internal
 	header Strict-Transport-Security "max-age=31536000"
+	# the same hub, seen through HTTPS
+	handle /.well-known/mercure {
+		reverse_proxy 127.0.0.1:8080 {
+			flush_interval -1
+		}
+	}
 	import app
 }
