@@ -7,6 +7,7 @@ namespace Demo\Import;
 use Demo\Camt\Money;
 use Demo\Camt\Statement;
 use Demo\Camt\StatementRejected;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
@@ -22,6 +23,36 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 final class StatementWriter
 {
     private const int ENTRIES_PER_INSERT = 100;
+
+    /**
+     * Locks every account row the statements will touch, in one fixed order (sorted by IBAN), before any of them is written.
+     * Two transactions that lock the same rows in the same order wait for each other but never deadlock. The strict mode needs
+     * this: its transaction holds the rows of a whole ZIP, so without a fixed order nearly every pair of ZIPs would deadlock.
+     * The partial mode does not do it, on purpose (see above), so that the deadlocks and the retries are visible.
+     *
+     * @param list<Statement> $statements
+     */
+    public function lockInOrder(Connection $connection, array $statements): void
+    {
+        $ibans = [];
+        foreach ($statements as $statement) {
+            $ibans[$statement->iban] = true;
+            foreach ($statement->entries as $entry) {
+                if (null !== $entry->counterparty) {
+                    $ibans[$entry->counterparty] = true;
+                }
+            }
+        }
+        if ([] === $ibans) {
+            return;
+        }
+        $ibans = array_map(strval(...), array_keys($ibans));
+        sort($ibans);
+
+        foreach (['accounts', 'account_stats'] as $table) { // the same order of tables everywhere, too
+            $connection->executeQuery("SELECT 1 FROM $table WHERE iban IN (?) ORDER BY iban FOR UPDATE", [$ibans], [ArrayParameterType::STRING])->fetchAllAssociative();
+        }
+    }
 
     /**
      * @return int the number of entries booked

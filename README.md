@@ -78,7 +78,16 @@ bash scripts/e2e.sh  # starts the stack and checks it
 
 ## Status
 
-Done: the stack, the API, authentication with key rotation, both upload paths, the outbox relay, the importers (reduced CAMT.053 schema, business rules, `partial` and `strict` mode, deadlock retries) and the page with the live import view. Next: chaos switches (kill a connection, force a deadlock), importer dashboards in Grafana, the k6 benchmark, Kubernetes manifests and the template repository.
+Version 0.1.0 (see [CHANGELOG.md](CHANGELOG.md)), pre-1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay, the importers (`partial` and `strict` mode, deadlock retries) and the page with the live import view work, and are exercised by the tests and by `scripts/e2e.sh` in CI.
+
+The numbers the page shows come from a laptop running everything in Docker, with the browser as the load generator. They show that the pieces work together; they are not a benchmark.
+
+## Roadmap
+
+1. **Chaos switches** on the page: cut a database connection, force a deadlock, and watch the imports still finish.
+2. **A real load test** with k6 (the API at a fixed arrival rate, the importers with 1, 2, 4 and 8 replicas, with and without PgBouncer), the results and the hardware published in the repository.
+3. **Kubernetes manifests** (probes, autoscaling, disruption budget, security context) and a **template repository** to start a service of your own from.
+4. **A browser test in CI** (Playwright) that runs an import and checks the page; the README gets a picture and a short recording of a real run.
 
 ## License
 

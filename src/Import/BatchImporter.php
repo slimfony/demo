@@ -41,11 +41,26 @@ final class BatchImporter
      */
     public function import(string $batchId, string $worker): ?ImportResult
     {
-        $started = hrtime(true);
         $batch = $this->batches->claim($batchId, $worker);
         if (null === $batch) {
             return null;
         }
+
+        try {
+            return $this->run($batchId, $batch);
+        } catch (\Throwable $e) { // for example a deadlock that outlasted every retry: the broker will deliver the message again
+            $this->batches->release($batchId);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * @param array{mode: string, source: string, bytes: string} $batch
+     */
+    private function run(string $batchId, array $batch): ImportResult
+    {
+        $started = hrtime(true);
         $mode = ImportMode::from($batch['mode']);
         $source = ImportSource::from($batch['source']);
 
@@ -53,7 +68,7 @@ final class BatchImporter
             $files = $this->archives->read($batch['bytes'], $source->limits());
         } catch (RejectedUpload $e) {
             $this->batches->recordError($batchId, new StatementRejected($e->reason, '*', $e->getMessage()));
-            $this->batches->finish($batchId, ImportResult::FAILED, 0, 0, 0);
+            $this->batches->finish($batchId, ImportResult::FAILED, 0);
 
             return new ImportResult($batchId, $mode->value, $source->value, ImportResult::FAILED, 0, 0, 0, 0, (hrtime(true) - $started) / 1e9, [$e->reason => 1]);
         }
@@ -80,7 +95,7 @@ final class BatchImporter
         }
         $failed = \count(array_filter($errors, static fn(StatementRejected $e): bool => StatementRejected::ROLLED_BACK !== $e->reason));
         $status = ImportMode::Strict === $mode && $failed > 0 ? ImportResult::FAILED : ImportResult::DONE;
-        $this->batches->finish($batchId, $status, $ok, $failed, $entries);
+        $this->batches->finish($batchId, $status, $failed);
 
         $reasons = array_count_values(array_map(static fn(StatementRejected $error): string => $error->reason, $errors));
 
@@ -97,7 +112,13 @@ final class BatchImporter
     {
         $ok = 0;
         $entries = 0;
+        $already = $this->batches->bookedStatements($batchId); // non-empty only when an earlier run of this batch was cut short
         foreach ($statements as $statement) {
+            if (isset($already[$statement->id])) {
+                ++$ok;
+
+                continue;
+            }
             try {
                 $entries += $this->retry->transactional(fn(Connection $connection): int => $this->writer->write($connection, $statement, $batchId));
                 ++$ok;
@@ -119,6 +140,7 @@ final class BatchImporter
     {
         try {
             $entries = $this->retry->transactional(function (Connection $connection) use ($batchId, $statements, $errors): int {
+                $this->writer->lockInOrder($connection, $statements); // a fixed order of locks: the ZIP waits for its turn instead of deadlocking
                 $booked = [];
                 $bad = $errors;
                 $entries = 0;

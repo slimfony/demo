@@ -54,6 +54,28 @@ export function startLive() {
   const p95 = document.getElementById('kpi-p95');
   const total = document.getElementById('kpi-total');
 
+  const sps = chart(document.getElementById('chart-sps'), '--accent', (v) => formatInteger(v));
+  const importP95 = chart(document.getElementById('chart-import-p95'), '--accent', (v) => formatInteger(v));
+  const kpiSps = document.getElementById('kpi-sps');
+  const waiting = document.getElementById('kpi-waiting');
+  const retries = document.getElementById('kpi-retries');
+
+  // the importers' side: what they book, how many ZIPs wait, how often the database ended a transaction
+  poll(async () => {
+    try {
+      const summary = await getJson('/api/import/summary');
+      if (summary.statements_per_second !== null) {
+        animateNumber(kpiSps, summary.statements_per_second, formatInteger);
+        sps.push(summary.at, summary.statements_per_second);
+      }
+      if (summary.import_p95_milliseconds !== null) importP95.push(summary.at, summary.import_p95_milliseconds);
+      animateNumber(waiting, (summary.batches?.queued ?? 0) + (summary.batches?.running ?? 0), formatInteger);
+      if (summary.deadlock_retries !== null) animateNumber(retries, summary.deadlock_retries, formatInteger);
+    } catch {
+      // the status pills tell whether the api is reachable
+    }
+  }, 2000);
+
   poll(async () => {
     try {
       const stats = await getJson('/api/stats');

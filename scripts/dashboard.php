@@ -40,6 +40,10 @@ $panels = [
     $series(9, 'Responses by status', [$target('sum by (status) (rate(http_requests_total[10s]))', '{{status}}')], 'reqps', 0, 12),
     $series(10, 'Database: retries and leaked transactions', [$target('sum by (reason) (rate(db_retries_total[10s]))', 'retries: {{reason}}', 'A'), $target('sum(rate(db_transactions_leaked_total[10s]))', 'leaked transactions', 'B')], 'ops', 12, 12),
     $series(11, 'Outbox relay: published per second and waiting', [$target('sum(rate(outbox_published_total[10s]))', 'published / s', 'A'), $target('sum(outbox_pending)', 'waiting in the outbox', 'B'), $target('sum(rate(outbox_failures_total[10s]))', 'failed turns / s', 'C')], 'short', 0, 20),
+    $series(13, 'Importers: statements per second by result', [$target('sum by (result) (rate(import_statements_total[10s]))', '{{result}}')], 'short', 0, 28),
+    $series(14, 'Importers: time to import a ZIP (p50, p95)', [$target('histogram_quantile(0.5, sum by (le) (rate(import_batch_seconds_bucket[10s]))) * 1000', 'p50', 'A'), $target('histogram_quantile(0.95, sum by (le) (rate(import_batch_seconds_bucket[10s]))) * 1000', 'p95', 'B')], 'ms', 12, 28),
+    $series(15, 'Importers: statements turned away, by reason', [$target('sum by (reason) (rate(import_statements_rejected_total[10s]))', '{{reason}}')], 'short', 0, 36),
+    $series(16, 'Importers: deadlocks run again, per importer', [$target('sum by (instance) (rate(db_retries_total{job="importer"}[10s]))', '{{instance}}')], 'short', 12, 36),
     $series(12, 'Uploads: accepted and refused by source and reason', [$target('sum by (source) (rate(imports_accepted_total[10s]))', 'accepted: {{source}}', 'A'), $target('sum by (source, reason) (rate(imports_rejected_total[10s]))', 'refused: {{source}} {{reason}}', 'B')], 'short', 12, 20),
 ];
 

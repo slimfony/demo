@@ -76,13 +76,13 @@
           <select name="faults">
             <option value="0">None</option>
             <option value="0.03" selected>3 in 100</option>
-            <option value="0.15">15 in 100</option>
+            <option value="0.1">10 in 100</option>
           </select>
         </label>
         <label>When one is wrong
           <select name="mode">
             <option value="partial" selected>Keep the good ones</option>
-            <option value="strict">Roll back the whole ZIP</option>
+            <option value="strict">Roll back the whole ZIP (slower)</option>
           </select>
         </label>
         <button type="submit" id="run-start" class="button"><span>Start import</span></button>
@@ -195,7 +195,7 @@
         <label>If a statement fails
           <select name="mode">
             <option value="partial" selected>Keep the good ones</option>
-            <option value="strict">Roll back the whole ZIP</option>
+            <option value="strict">Roll back the whole ZIP (slower)</option>
           </select>
         </label>
         <button type="submit" id="upload-start" class="button"><span>Send ZIP</span></button>
@@ -207,17 +207,26 @@
 
     <section class="wrap block keep" id="live" aria-labelledby="live-title">
       <h2 id="live-title">Live</h2>
-      <p class="sub">Prometheus reads the service every two seconds.</p>
+      <p class="sub">Prometheus reads the API and the importers every two seconds.</p>
 
       <div class="numbers">
-        <div><span class="num" id="kpi-rps">–</span><span class="cap">requests per second</span></div>
-        <div><span class="num" id="kpi-p95">–</span><span class="cap">p95, time inside the app</span></div>
-        <div><span class="num" id="kpi-total">–</span><span class="cap">requests served</span></div>
+        <div><span class="num" id="kpi-rps">–</span><span class="cap">API requests per second</span></div>
+        <div><span class="num" id="kpi-p95">–</span><span class="cap">API p95, time inside the app</span></div>
+        <div><span class="num" id="kpi-total">–</span><span class="cap">API requests served</span></div>
+      </div>
+      <div class="numbers">
+        <div><span class="num" id="kpi-sps">–</span><span class="cap">statements booked per second</span></div>
+        <div><span class="num" id="kpi-waiting">–</span><span class="cap">ZIPs waiting or being imported</span></div>
+        <div><span class="num" id="kpi-retries">–</span><span class="cap">deadlocks run again, in total</span></div>
       </div>
 
       <div class="charts">
         <figure><div id="chart-rps" class="chart" role="img" aria-label="Requests per second, last two minutes"></div><figcaption>Requests per second</figcaption></figure>
-        <figure><div id="chart-p95" class="chart" role="img" aria-label="p95 latency, last two minutes"></div><figcaption>p95 in microseconds</figcaption></figure>
+        <figure><div id="chart-p95" class="chart" role="img" aria-label="p95 latency, last two minutes"></div><figcaption>API p95 in microseconds</figcaption></figure>
+      </div>
+      <div class="charts">
+        <figure><div id="chart-sps" class="chart" role="img" aria-label="Statements booked per second, last two minutes"></div><figcaption>Statements booked per second</figcaption></figure>
+        <figure><div id="chart-import-p95" class="chart" role="img" aria-label="Import time of a ZIP, p95, last two minutes"></div><figcaption>Time to import a ZIP, p95 in milliseconds</figcaption></figure>
       </div>
     </section>
 

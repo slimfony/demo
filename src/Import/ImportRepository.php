@@ -12,16 +12,20 @@ final class ImportRepository
 {
     public function __construct(private readonly Connection $connection) {}
 
+    /** Seconds after which a batch that is still `running` is taken to be abandoned (the broker redelivers its message after 60). */
+    public const int ABANDONED_AFTER_SECONDS = 90;
+
     /**
-     * Takes a queued batch for this worker. Null when it is not queued any more (another worker has it, or this is a repeated delivery).
+     * Takes a batch for this worker: a queued one, or one that a worker started and then abandoned. Null when it is not available
+     * (another worker is on it, or it is finished: this is a repeated delivery).
      *
      * @return array{mode: string, source: string, bytes: string}|null
      */
     public function claim(string $batchId, string $worker): ?array
     {
         $row = $this->connection->fetchAssociative(
-            "UPDATE batches SET status = 'running', worker = ?, started_at = now() WHERE id = ? AND status = 'queued' RETURNING mode, source, payload",
-            [$worker, $batchId],
+            "UPDATE batches SET status = 'running', worker = ?, started_at = now() WHERE id = ? AND (status = 'queued' OR (status = 'running' AND started_at < now() - make_interval(secs => ?))) RETURNING mode, source, payload",
+            [$worker, $batchId, self::ABANDONED_AFTER_SECONDS],
         );
         if (false === $row) {
             return null;
@@ -35,11 +39,42 @@ final class ImportRepository
         return ['mode' => $row['mode'], 'source' => $row['source'], 'bytes' => $bytes];
     }
 
-    public function finish(string $batchId, string $status, int $statementsOk, int $statementsFailed, int $entries): void
+    /**
+     * Gives a batch back to the queue after a failure, so that the redelivered message finds it waiting.
+     */
+    public function release(string $batchId): void
+    {
+        $this->connection->executeStatement("UPDATE batches SET status = 'queued', worker = NULL, started_at = NULL WHERE id = ? AND status = 'running'", [$batchId]);
+    }
+
+    /**
+     * The ids of the statements of this batch that are already booked (a repeated run of the batch must not book them twice).
+     *
+     * @return array<string, true>
+     */
+    public function bookedStatements(string $batchId): array
+    {
+        $ids = [];
+        foreach ($this->connection->fetchFirstColumn('SELECT statement_id FROM statements WHERE batch_id = ?', [$batchId]) as $id) {
+            if (\is_string($id)) {
+                $ids[$id] = true;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Closes the batch. What was booked is counted from the database, which is the truth even when the batch was run more than once.
+     */
+    public function finish(string $batchId, string $status, int $statementsFailed): void
     {
         $this->connection->executeStatement(
-            'UPDATE batches SET status = ?, statements_ok = ?, statements_failed = ?, entries_booked = ?, finished_at = now() WHERE id = ?',
-            [$status, $statementsOk, $statementsFailed, $entries, $batchId],
+            'UPDATE batches SET status = ?, statements_failed = ?, finished_at = now(),
+                statements_ok = (SELECT count(*) FROM statements WHERE batch_id = batches.id),
+                entries_booked = (SELECT count(*) FROM entries WHERE statement_pk IN (SELECT id FROM statements WHERE batch_id = batches.id))
+             WHERE id = ?',
+            [$status, $statementsFailed, $batchId],
         );
     }
 

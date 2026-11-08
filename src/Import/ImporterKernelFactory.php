@@ -53,7 +53,7 @@ final class ImporterKernelFactory
         $logger = new TeeLogger(new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context), $events, 'importer');
         $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: true, applicationName: 'demo-importer');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
-        $retry = new Retry($connection, $logger, retries: $metrics->counter('db_retries_total', 'Database operations that were retried (deadlocks, lost connections).', ['reason']));
+        $retry = new Retry($connection, $logger, maxAttempts: 8, retries: $metrics->counter('db_retries_total', 'Database operations that were retried (deadlocks, lost connections).', ['reason']));
         $importer = new BatchImporter(
             new ImportRepository($connection),
             new ArchiveReader(),

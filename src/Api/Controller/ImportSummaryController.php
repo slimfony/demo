@@ -21,6 +21,7 @@ final class ImportSummaryController
     private const string STATEMENTS_PER_SECOND = 'sum(rate(import_statements_total{result="booked"}[10s]))';
     private const string BATCHES_PER_SECOND = 'sum(rate(import_batches_total[10s]))';
     private const string DEADLOCK_RETRIES = 'sum(db_retries_total{job="importer"})';
+    private const string IMPORT_P95_SECONDS = 'histogram_quantile(0.95, sum by (le) (rate(import_batch_seconds_bucket[10s])))';
     private const string CACHE_KEY = 'demo.import.summary';
 
     public function __construct(
@@ -36,7 +37,9 @@ final class ImportSummaryController
             return new JsonResponse($cached, headers: ['Cache-Control' => 'no-store']);
         }
 
+        $p95 = $this->prometheus->value(self::IMPORT_P95_SECONDS);
         $summary = $this->retry->read(fn(Connection $connection): array => $this->batches->summary($connection)) + [
+            'import_p95_milliseconds' => null === $p95 ? null : round($p95 * 1000, 1),
             'statements_per_second' => $this->prometheus->value(self::STATEMENTS_PER_SECOND),
             'batches_per_second' => $this->prometheus->value(self::BATCHES_PER_SECOND),
             'deadlock_retries' => $this->prometheus->value(self::DEADLOCK_RETRIES),
