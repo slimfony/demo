@@ -13,6 +13,20 @@ docker compose up -d --build --wait
 
 Docker needs about 3 GB of memory for this stack.
 
+## The demo case: importing bank statements
+
+A bank sends its customers' account statements as ZIP files. Each ZIP holds XML files in the ISO 20022 **CAMT.053** format (a reduced version of the schema is in [schema/](schema/)), one statement per file. The service has to take thousands of these in at once and book every statement correctly.
+
+What the demo shows, with a real service and not a toy endpoint:
+
+- **Taking uploads in.** Two ways in: with a token (`/api/imports`, the sender is known and recorded) and as an anonymous sandbox (`/public/drop`, small files only, rate limited). Every broken token is refused for its own reason: expired, forged, wrong audience, missing permission.
+- **Booking each statement all or nothing.** A statement, its entries and the balance of its account are written in one transaction. The files are checked against the XSD first, then against the business rules: the opening balance plus the entries must give the closing balance, the account must be one of ours and in the same currency, the entries must lie in the statement period, nothing may be imported twice.
+- **Two ways to treat a bad statement.** `partial`: the bad statement is rolled back and recorded, the other nine stay. `strict`: the whole ZIP is one transaction with a savepoint per statement; every mistake is reported, then everything is rolled back, the nine good statements too, and each is accounted for.
+- **Many importers at once.** Importers share the work through NATS JetStream. They update the same few accounts, so they run into deadlocks; the database ends one transaction and the core's `Retry` runs it again. The retries are counted and visible.
+- **Seeing it work.** Every service exposes metrics, Prometheus scrapes them every two seconds, and the Grafana dashboard and the page show the same numbers.
+
+The statements come from a generator that makes valid files and, on request, files that are wrong in one specific way (a wrong balance, an unknown account, a schema error, and so on), so every rule can be seen doing its job.
+
 ## What runs
 
 | Service | Role |

@@ -5,6 +5,11 @@ x-service: &service
   security_opt:
     - no-new-privileges:true
 
+# Optional, only while building the image: a GitHub token for composer downloads (see the Dockerfile).
+secrets:
+  composer_auth:
+    environment: COMPOSER_AUTH
+
 volumes:
   secrets:
   pgdata:
@@ -153,6 +158,8 @@ services:
     build:
       context: .
       target: runtime
+      secrets:
+        - composer_auth
     image: slimfony-demo:dev
     depends_on:
       init:
