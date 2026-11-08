@@ -3,7 +3,6 @@ import { on, startEvents } from './events.js';
 import { formatInteger, formatMilliseconds } from './format.js';
 import { startLive } from './live.js';
 import { runLoad } from './loadgen.js';
-import { setupLogView } from './logview.js';
 import { setupMenus } from './menu.js';
 import { setupPresent } from './present.js';
 import { setupRun } from './run.js';
@@ -65,7 +64,8 @@ if (window.uPlot) {
 setupPush();
 setupUpload();
 setupMenus();
-on('log', setupLogView());
+// the log view is an extra: if a browser extension blocks its script, the rest of the page must still work
+import('./activity.js').then(({ setupLogView }) => on('log', setupLogView())).catch(() => {});
 setupRun();
 startEvents();
 startBatches();
