@@ -53,8 +53,17 @@ a:hover { text-decoration: underline; }
 .theme .i-sun { display: none; }
 :root[data-theme="dark"] .theme .i-sun { display: block; }
 :root[data-theme="dark"] .theme .i-moon { display: none; }
-.bar nav a { color: var(--text-2); }
-.bar nav a:hover { color: var(--text); text-decoration: none; }
+.bar nav a, .menu summary { color: var(--text-2); }
+.bar nav a:hover, .menu summary:hover, .menu[open] summary { color: var(--text); text-decoration: none; }
+
+/* drop-down: a group of try-it sections under one entry */
+.menu { position: relative; }
+.menu summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu summary::after { content: ""; width: 5px; height: 5px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-1px) rotate(45deg); }
+.menu-list { position: absolute; top: calc(100% + 14px); left: -12px; min-width: 190px; padding: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 30px rgb(0 0 0 / .12); display: grid; }
+.bar nav .menu-list a { padding: 8px 12px; border-radius: 8px; color: var(--text); font-size: 14px; }
+.bar nav .menu-list a:hover { background: var(--grouped); }
 
 /* hero */
 .hero { text-align: center; padding-top: 112px; padding-bottom: 72px; }

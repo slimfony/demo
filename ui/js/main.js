@@ -1,6 +1,7 @@
 import { formatInteger, formatMilliseconds } from './format.js';
 import { startLive } from './live.js';
 import { runLoad } from './loadgen.js';
+import { setupMenus } from './menu.js';
 import { startRuntime } from './runtime.js';
 import { startStatus } from './status.js';
 import { setupUpload } from './upload.js';
@@ -57,3 +58,4 @@ if (window.uPlot) {
 }
 setupPush();
 setupUpload();
+setupMenus();
