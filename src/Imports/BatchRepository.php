@@ -38,7 +38,7 @@ final class BatchRepository
     public function find(Connection $connection, string $id): ?array
     {
         $row = $connection->fetchAssociative(
-            'SELECT id, status, source, mode, subject, token_kid, size_bytes, entries, created_at FROM batches WHERE id = ?',
+            'SELECT id, status, source, mode, subject, token_kid, size_bytes, entries AS files, statements_ok, statements_failed, entries_booked, worker, created_at, started_at, finished_at FROM batches WHERE id = ?',
             [$id],
         );
 

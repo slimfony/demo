@@ -7,6 +7,7 @@ namespace Demo\Relay;
 use Basis\Nats\Client;
 use Basis\Nats\Configuration;
 use Demo\Infrastructure\Nats\NatsMessagePublisher;
+use Demo\Infrastructure\Nats\StreamProvisioner;
 use Demo\Outbox\OutboxRelay;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
@@ -38,7 +39,7 @@ final class RelayKernelFactory
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger);
         $nats = new Client(new Configuration(host: $this->env->string('NATS_HOST'), port: $this->env->int('NATS_PORT', 4222), timeout: 2.0));
-        $relay = new OutboxRelay($retry, new NatsMessagePublisher($nats, 'IMPORTS', ['imports.>']));
+        $relay = new OutboxRelay($retry, new NatsMessagePublisher($nats, new StreamProvisioner()));
 
         // the metrics live in this process's APCu (start it with -d apc.enable_cli=1) and are served on a port for Prometheus
         if (!\function_exists('apcu_enabled') || !apcu_enabled()) {

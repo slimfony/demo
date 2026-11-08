@@ -1,0 +1,22 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Demo\Import\ImporterKernelFactory;
+use Demo\Import\ImporterWorker;
+use Psr\Log\LoggerInterface;
+use Slimfony\Core\Config\Env;
+use Slimfony\Core\Worker\ConsumerRunner;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$kernel = new ImporterKernelFactory(Env::fromGlobals(), dirname(__DIR__))->create();
+$logger = $kernel->get(LoggerInterface::class);
+$worker = $kernel->get(ImporterWorker::class);
+assert($logger instanceof LoggerInterface && $worker instanceof ImporterWorker);
+
+$logger->info('Importer started', ['worker' => gethostname()]);
+
+// Stops on SIGTERM after the batch in progress; leaves (and is restarted by the container) when it grows past 96 MiB.
+new ConsumerRunner($kernel, $logger, maxMemoryBytes: 96 * 1024 * 1024)->run($worker->tick(...));

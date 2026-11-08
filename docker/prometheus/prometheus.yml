@@ -17,3 +17,13 @@ scrape_configs:
       credentials_file: /secrets/metrics_token
     static_configs:
       - targets: ["relay:9100"]
+  - job_name: importer
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /secrets/metrics_token
+    dns_sd_configs: # one target per importer replica
+      - names: [importer]
+        type: A
+        port: 9100
+        refresh_interval: 5s

@@ -55,7 +55,7 @@ final class BatchImporter
             $this->batches->recordError($batchId, new StatementRejected($e->reason, '*', $e->getMessage()));
             $this->batches->finish($batchId, ImportResult::FAILED, 0, 0, 0);
 
-            return new ImportResult($batchId, $mode->value, $source->value, ImportResult::FAILED, 0, 0, 0, 0, (hrtime(true) - $started) / 1e9);
+            return new ImportResult($batchId, $mode->value, $source->value, ImportResult::FAILED, 0, 0, 0, 0, (hrtime(true) - $started) / 1e9, [$e->reason => 1]);
         }
 
         // read and check everything that needs no database first
@@ -82,7 +82,9 @@ final class BatchImporter
         $status = ImportMode::Strict === $mode && $failed > 0 ? ImportResult::FAILED : ImportResult::DONE;
         $this->batches->finish($batchId, $status, $ok, $failed, $entries);
 
-        return new ImportResult($batchId, $mode->value, $source->value, $status, $ok, $failed, $rolledBack, $entries, (hrtime(true) - $started) / 1e9);
+        $reasons = array_count_values(array_map(static fn(StatementRejected $error): string => $error->reason, $errors));
+
+        return new ImportResult($batchId, $mode->value, $source->value, $status, $ok, $failed, $rolledBack, $entries, (hrtime(true) - $started) / 1e9, $reasons);
     }
 
     /**

@@ -24,7 +24,7 @@ async function tokenFor(kind) {
 }
 
 async function send(kind, mode) {
-  const sample = await (await fetch('/api/sample.zip?files=3', { cache: 'no-store' })).blob();
+  const sample = await (await fetch('/api/sample.zip?files=10', { cache: 'no-store' })).blob();
   if ('sandbox' === kind) {
     return fetch('/public/drop', { method: 'POST', body: sample });
   }

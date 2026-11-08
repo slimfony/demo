@@ -17,9 +17,11 @@ status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 curl -sf $base/api/runtime | grep -q '"worker_mode":true' || fail "/api/runtime is not in worker mode"
 curl -sf $base/ | grep -q 'PHP never left' || fail "the page is not served"
 
-# a small ZIP with two files, made inside the container (it has PHP and ext-zip)
+# ZIPs of generated CAMT.053 statements: ten good ones, and three that are all wrong (the same seed always gives the same files)
 zip=$(mktemp)
-docker compose exec -T web php -r '$z = new ZipArchive(); $p = tempnam("/tmp", "z"); $z->open($p, ZipArchive::OVERWRITE); $z->addFromString("a.xml", "<Document/>"); $z->addFromString("b.xml", "<Document/>"); $z->close(); echo file_get_contents($p);' > "$zip"
+bad=$(mktemp)
+curl -sf "$base/api/sample.zip?seed=1&files=10" -o "$zip"
+curl -sf "$base/api/sample.zip?seed=2&files=3&fault_rate=1&fault=balance_mismatch" -o "$bad"
 
 token() { curl -sf -X POST "$base/api/demo-token?kind=$1" | sed 's/.*"token":"\([^"]*\)".*/\1/'; }
 upload() { status -X POST -H "Authorization: Bearer $(token "$1")" --data-binary @"$zip" "$base/api/imports"; }
@@ -34,6 +36,14 @@ response=$(curl -sf -X POST -H "Authorization: Bearer $(token valid)" --data-bin
 echo "$response" | grep -q '"source":"jwt"' || fail "the valid upload was not accepted: $response"
 id=$(echo "$response" | sed 's/.*"id":"\([^"]*\)".*/\1/')
 curl -sf -H "Authorization: Bearer $(token valid)" "$base/api/batches/$id" | grep -q '"subject":"demo-client"' || fail "the batch does not record who sent it"
+
+# the importers pick the batch up from NATS and book it: wait for the result
+wait_for() { for _ in $(seq 1 40); do curl -sf -H "Authorization: Bearer $(token valid)" "$base/api/batches/$1" | grep -q "$2" && return 0; sleep 1; done; return 1; }
+wait_for "$id" '"status":"done".*"statements_ok":10' || fail "the batch of ten good statements was not imported"
+
+# strict mode: one bad statement rolls the whole ZIP back
+strict=$(curl -sf -X POST -H "Authorization: Bearer $(token valid)" --data-binary @"$bad" "$base/api/imports?mode=strict" | sed 's/.*"id":"\([^"]*\)".*/\1/')
+wait_for "$strict" '"status":"failed".*"statements_ok":0' || fail "the strict batch with bad statements was not rolled back"
 
 [ "$(status -X POST --data-binary @"$zip" $base/public/drop)" = 202 ] || fail "the public sandbox must accept a small ZIP"
 [ "$(status -X POST --data 'not a zip' $base/public/drop)" = 422 ] || fail "the public sandbox must refuse a file that is not a ZIP"

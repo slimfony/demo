@@ -153,6 +153,40 @@ services:
       - ALL
     mem_limit: 128m
 
+  # Imports the uploaded batches. Any number can run side by side (`docker compose up --scale importer=8`): they share the work through NATS.
+  importer:
+    <<: *service
+    image: slimfony-demo:dev
+    command: ["php", "-d", "apc.enable_cli=1", "bin/importer"]
+    healthcheck:
+      disable: true # a command line process; the container ends with it
+    deploy:
+      replicas: 4
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    environment:
+      LOG_LEVEL: info
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_NAME: demo
+      DB_USER: demo
+      DB_PASSWORD_FILE: /secrets/db_password
+      NATS_HOST: nats
+      METRICS_TOKEN_FILE: /secrets/metrics_token
+    volumes:
+      - secrets:/secrets:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    mem_limit: 192m
+
   web:
     <<: *service
     build:

@@ -9,6 +9,7 @@ use Demo\Api\Controller\SampleArchiveController;
 use Demo\Api\Controller\StatsController;
 use Demo\Api\Controller\StatusController;
 use Demo\Api\Controller\UploadController;
+use Demo\Camt\StatementGenerator;
 use Demo\Imports\ArchiveInspector;
 use Demo\Imports\BatchRepository;
 use Demo\Imports\RateLimiter;
@@ -92,5 +93,6 @@ return static function (ContainerBuilder $c): void {
     $c->register(BatchController::class)->setAutowired(true);
     $c->register(TokenSource::class, HttpTokenSource::class)->setArguments(['%env(IDP_URL)%']);
     $c->register(DemoTokenController::class)->setAutowired(true);
-    $c->register(SampleArchiveController::class);
+    $c->register(StatementGenerator::class);
+    $c->register(SampleArchiveController::class)->setAutowired(true);
 };

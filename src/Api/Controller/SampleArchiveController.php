@@ -4,35 +4,37 @@ declare(strict_types=1);
 
 namespace Demo\Api\Controller;
 
+use Demo\Camt\StatementGenerator;
+use Slimfony\Core\Http\Attributes;
+use Slimfony\Core\Http\ProblemResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/** A small ZIP the page can upload, so a visitor can try the upload routes without a file of their own. */
+/**
+ * A ZIP of generated CAMT.053 statements that the page (or a script) can upload, so nobody needs a file of their own.
+ * The same seed gives the same ZIP. Optionally some statements are wrong: `fault_rate` (0 to 1) and, to make them all
+ * wrong in one way, `fault` (one of the codes the importer reports).
+ */
 final class SampleArchiveController
 {
     private const int MAX_FILES = 10;
 
+    public function __construct(private readonly StatementGenerator $generator) {}
+
     public function __invoke(Request $request): Response
     {
-        $files = max(1, min(self::MAX_FILES, $request->query->getInt('files', 3)));
+        $files = max(1, min(self::MAX_FILES, $request->query->getInt('files', 10)));
+        $seed = $request->query->getInt('seed', random_int(1, 1_000_000_000));
+        $rate = max(0.0, min(1.0, (float) $request->query->getString('fault_rate', '0')));
+        $fault = $request->query->getString('fault');
+        if ('' !== $fault && !\in_array($fault, StatementGenerator::FAULTS, true)) {
+            $id = $request->attributes->get(Attributes::REQUEST_ID);
 
-        $path = tempnam(sys_get_temp_dir(), 'sample');
-        if (false === $path) {
-            throw new \RuntimeException('No temporary file available.');
+            return new ProblemResponse(400, \is_string($id) ? $id : null, 'Unknown fault.');
         }
 
-        try {
-            $zip = new \ZipArchive();
-            $zip->open($path, \ZipArchive::OVERWRITE);
-            for ($i = 1; $i <= $files; ++$i) {
-                $zip->addFromString(\sprintf('statement-%02d.xml', $i), \sprintf('<Document><BkToCstmrStmt><Stmt><Id>sample-%02d</Id></Stmt></BkToCstmrStmt></Document>', $i));
-            }
-            $zip->close();
-            $bytes = (string) file_get_contents($path);
-        } finally {
-            unlink($path);
-        }
+        $zip = $this->generator->zip($this->generator->files($seed, $files, $rate, '' === $fault ? null : $fault));
 
-        return new Response($bytes, 200, ['Content-Type' => 'application/zip', 'Content-Disposition' => 'attachment; filename="sample.zip"', 'Cache-Control' => 'no-store']);
+        return new Response($zip, 200, ['Content-Type' => 'application/zip', 'Content-Disposition' => 'attachment; filename="statements.zip"', 'Cache-Control' => 'no-store']);
     }
 }
