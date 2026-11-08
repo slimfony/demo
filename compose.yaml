@@ -1,0 +1,181 @@
+name: slimfony-demo
+
+x-service: &service
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+
+volumes:
+  secrets:
+  pgdata:
+  natsdata:
+  promdata:
+  grafanadata:
+
+services:
+  # Generates the random secrets once into the "secrets" volume. Nothing secret is in the repository.
+  init:
+    image: alpine:3.24.4
+    restart: "no"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - secrets:/secrets
+      - ./docker/init/init-secrets.sh:/init.sh:ro
+    command: ["sh", "/init.sh"]
+
+  postgres:
+    <<: *service
+    image: postgres:17.11-alpine3.24
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DB: demo
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD_FILE: /secrets/db_password
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - log_min_duration_statement=500
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - secrets:/secrets:ro
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-guards.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+
+  pgbouncer:
+    <<: *service
+    image: edoburu/pgbouncer:v1.26.1-p0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./docker/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - secrets:/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 6432"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 64m
+
+  nats:
+    <<: *service
+    image: nats:2.15.2-alpine
+    command: ["-c", "/etc/nats/nats.conf"]
+    volumes:
+      - natsdata:/data
+      - ./docker/nats/nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8222/healthz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 128m
+
+  web:
+    <<: *service
+    build:
+      context: .
+      target: runtime
+    image: slimfony-demo:dev
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      LOG_LEVEL: info
+      DB_HOST: pgbouncer
+      DB_PORT: "6432"
+      DB_NAME: demo
+      DB_USER: demo
+      DB_PASSWORD_FILE: /secrets/db_password
+      METRICS_TOKEN_FILE: /secrets/metrics_token
+      PROMETHEUS_URL: http://prometheus:9090
+      NATS_MONITOR_URL: http://nats:8222
+    volumes:
+      - secrets:/secrets:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /data:uid=10001,gid=10001
+      - /config:uid=10001,gid=10001
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/readyz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    mem_limit: 640m
+
+  prometheus:
+    <<: *service
+    image: prom/prometheus:v3.16.0
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=6h
+    volumes:
+      - promdata:/prometheus
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - secrets:/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/-/ready >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 256m
+
+  grafana:
+    <<: *service
+    image: grafana/grafana:12.4.14
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      prometheus:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /secrets/grafana_password
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_USERS_DEFAULT_THEME: dark
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/demo.json
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - secrets:/secrets:ro
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/etc/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    mem_limit: 256m

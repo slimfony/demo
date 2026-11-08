@@ -1,0 +1,608 @@
+{
+    "uid": "slimfony-demo",
+    "title": "slimfony demo",
+    "tags": [
+        "slimfony"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "2s",
+    "time": {
+        "from": "now-5m",
+        "to": "now"
+    },
+    "timepicker": {
+        "refresh_intervals": [
+            "1s",
+            "2s",
+            "5s",
+            "10s"
+        ]
+    },
+    "editable": false,
+    "panels": [
+        {
+            "id": 1,
+            "type": "stat",
+            "title": "Requests / s",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(http_requests_total[10s]))",
+                    "legendFormat": "",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "decimals": 1,
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#2DD4BF",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "background_solid",
+                "graphMode": "area",
+                "textMode": "value",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                }
+            }
+        },
+        {
+            "id": 2,
+            "type": "stat",
+            "title": "p95 latency",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[10s]))) * 1000000",
+                    "legendFormat": "",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "µs",
+                    "decimals": 1,
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#2DD4BF",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "background_solid",
+                "graphMode": "area",
+                "textMode": "value",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                }
+            }
+        },
+        {
+            "id": 3,
+            "type": "stat",
+            "title": "p99 latency",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[10s]))) * 1000000",
+                    "legendFormat": "",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "µs",
+                    "decimals": 1,
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#2DD4BF",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "background_solid",
+                "graphMode": "area",
+                "textMode": "value",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                }
+            }
+        },
+        {
+            "id": 4,
+            "type": "stat",
+            "title": "Requests served",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 12,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(http_requests_total)",
+                    "legendFormat": "",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "decimals": 1,
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#2DD4BF",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "background_solid",
+                "graphMode": "area",
+                "textMode": "value",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                }
+            }
+        },
+        {
+            "id": 5,
+            "type": "stat",
+            "title": "Server errors / s",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(http_requests_total{status=~\"5..\"}[10s])) or vector(0)",
+                    "legendFormat": "",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "decimals": 1,
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#2DD4BF",
+                                "value": null
+                            },
+                            {
+                                "color": "#F87171",
+                                "value": 0.001
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "background_solid",
+                "graphMode": "area",
+                "textMode": "value",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                }
+            }
+        },
+        {
+            "id": 6,
+            "type": "stat",
+            "title": "Rejected (401/403) / s",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(http_requests_total{status=~\"40[13]\"}[10s])) or vector(0)",
+                    "legendFormat": "",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "decimals": 1,
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#2DD4BF",
+                                "value": null
+                            },
+                            {
+                                "color": "#FBBF24",
+                                "value": 0.001
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "background_solid",
+                "graphMode": "area",
+                "textMode": "value",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                }
+            }
+        },
+        {
+            "id": 7,
+            "type": "timeseries",
+            "title": "Requests per second by route",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 4
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum by (route) (rate(http_requests_total[10s]))",
+                    "legendFormat": "{{route}}",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 12,
+                        "showPoints": "never",
+                        "spanNulls": true
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Latency percentiles (core + app, per request)",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 4
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket[10s]))) * 1000000",
+                    "legendFormat": "p50",
+                    "refId": "A",
+                    "interval": "2s"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[10s]))) * 1000000",
+                    "legendFormat": "p95",
+                    "refId": "B",
+                    "interval": "2s"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[10s]))) * 1000000",
+                    "legendFormat": "p99",
+                    "refId": "C",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "µs",
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 12,
+                        "showPoints": "never",
+                        "spanNulls": true
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 9,
+            "type": "timeseries",
+            "title": "Responses by status",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 12
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum by (status) (rate(http_requests_total[10s]))",
+                    "legendFormat": "{{status}}",
+                    "refId": "A",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 12,
+                        "showPoints": "never",
+                        "spanNulls": true
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 10,
+            "type": "timeseries",
+            "title": "Database: retries and leaked transactions",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 12
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum by (reason) (rate(db_retries_total[10s]))",
+                    "legendFormat": "retries: {{reason}}",
+                    "refId": "A",
+                    "interval": "2s"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(db_transactions_leaked_total[10s]))",
+                    "legendFormat": "leaked transactions",
+                    "refId": "B",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "ops",
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 12,
+                        "showPoints": "never",
+                        "spanNulls": true
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        }
+    ]
+}
