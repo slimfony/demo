@@ -1,0 +1,13 @@
+.git
+.github
+vendor
+var
+tests
+docs
+node_modules
+.phpunit.cache
+.phpstan.cache
+.php-cs-fixer.cache
+PLAN.md
+*.md
+compose.yaml

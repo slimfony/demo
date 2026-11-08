@@ -1,0 +1,45 @@
+{
+    "name": "slimfony/demo",
+    "description": "Reference microservice built on slimfony/core: concurrent import of zipped ISO 20022 CAMT.053 bank statements.",
+    "type": "project",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.4",
+        "ext-apcu": "*",
+        "ext-pdo_pgsql": "*",
+        "slimfony/core": "^0.3.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "phpstan/phpstan": "^2.3",
+        "phpstan/phpstan-phpunit": "^2.1",
+        "phpstan/phpstan-strict-rules": "^2.1",
+        "phpunit/phpunit": "^13.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Demo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Demo\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {}
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse --memory-limit=512M",
+        "cs": "php-cs-fixer fix --dry-run --diff",
+        "ci": [
+            "@test",
+            "@stan",
+            "@cs"
+        ]
+    }
+}
