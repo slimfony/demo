@@ -2,14 +2,23 @@
 
 declare(strict_types=1);
 
+use Demo\Api\Controller\BatchController;
+use Demo\Api\Controller\DemoTokenController;
 use Demo\Api\Controller\RuntimeController;
 use Demo\Api\Controller\StatsController;
 use Demo\Api\Controller\StatusController;
+use Demo\Api\Controller\UploadController;
+use Demo\Imports\ArchiveInspector;
+use Demo\Imports\BatchRepository;
 use Demo\Infrastructure\Http\HttpReadinessCheck;
+use Demo\Infrastructure\Idp\HttpTokenSource;
+use Demo\Infrastructure\Idp\TokenSource;
 use Demo\Infrastructure\Prometheus\HttpPrometheusQuery;
 use Demo\Infrastructure\Prometheus\PrometheusQuery;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
+use Slimfony\Core\Auth\Authenticator;
+use Slimfony\Core\Auth\AuthMiddleware;
 use Slimfony\Core\Database\ConnectionLifecycle;
 use Slimfony\Core\Database\ConnectionLifecycleMiddleware;
 use Slimfony\Core\Database\Retry;
@@ -42,11 +51,16 @@ return static function (ContainerBuilder $c): void {
     $c->register(RequestIdMiddleware::class)->setAutowired(true);
     $c->register(SecurityHeadersMiddleware::class);
     $c->register(ConnectionLifecycleMiddleware::class)->setAutowired(true);
-    $c->register(BodySizeLimitMiddleware::class)->setArguments([65_536]);
+    $c->register(BodySizeLimitMiddleware::class)->setArguments([1_048_576]); // the largest upload; the sandbox route is held to less by its own limits
+
+    // Authentication: deny by default. The authenticator (built at boot from the identity provider's settings) checks the token.
+    $c->register(Authenticator::class)->setSynthetic(true)->setPublic(true);
+    $c->register(AuthMiddleware::class)->setAutowired(true);
     $c->setParameter('slimfony.middleware', [
         MetricsMiddleware::class,
         RequestIdMiddleware::class,
         SecurityHeadersMiddleware::class,
+        AuthMiddleware::class,
         ConnectionLifecycleMiddleware::class,
         BodySizeLimitMiddleware::class,
     ]);
@@ -67,4 +81,12 @@ return static function (ContainerBuilder $c): void {
     ]]);
     $c->register(StatsController::class)->setAutowired(true);
     $c->register(RuntimeController::class);
+
+    // Imports: the upload (two routes), the state of a batch, and the demo tokens for the page.
+    $c->register(ArchiveInspector::class);
+    $c->register(BatchRepository::class);
+    $c->register(UploadController::class)->setAutowired(true);
+    $c->register(BatchController::class)->setAutowired(true);
+    $c->register(TokenSource::class, HttpTokenSource::class)->setArguments(['%env(IDP_URL)%']);
+    $c->register(DemoTokenController::class)->setAutowired(true);
 };

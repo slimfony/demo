@@ -6,6 +6,10 @@ namespace Demo\Api;
 
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
+use Slimfony\Core\Auth\Authenticator;
+use Slimfony\Core\Auth\Jwt\JwksKeyProvider;
+use Slimfony\Core\Auth\Jwt\JwtAuthenticator;
+use Slimfony\Core\Auth\Jwt\JwtConfiguration;
 use Slimfony\Core\Config\Env;
 use Slimfony\Core\Database\ConnectionFactory;
 use Slimfony\Core\Database\ConnectionLifecycle;
@@ -48,6 +52,12 @@ final class ApiKernelFactory
         // fail at boot, not at the first request, when an address the container resolves from the environment is missing
         $this->env->string('PROMETHEUS_URL');
         $this->env->string('NATS_MONITOR_URL');
+        $this->env->string('IDP_URL');
+        $authenticator = new JwtAuthenticator(
+            new JwtConfiguration($this->env->string('JWT_ISSUER'), $this->env->string('JWT_AUDIENCE'), ['EdDSA']), // only the algorithm the identity provider signs with
+            new JwksKeyProvider($this->env->string('JWKS_URI'), $logger),
+            $logger,
+        );
 
         apcu_add('demo.started', time()); // the first worker thread wins: the uptime of the process
 
@@ -64,6 +74,7 @@ final class ApiKernelFactory
                 Connection::class => $connection,
                 ConnectionLifecycle::class => $lifecycle,
                 Retry::class => $retry,
+                Authenticator::class => $authenticator,
                 MetricsController::class => new MetricsController($metrics, $this->env->string('METRICS_TOKEN')),
             ],
         );

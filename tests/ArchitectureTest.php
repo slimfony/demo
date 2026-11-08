@@ -39,7 +39,7 @@ final class ArchitectureTest extends TestCase
     {
         foreach (self::classes() as $name) {
             $class = new \ReflectionClass($name);
-            if ($class->isInterface()) {
+            if ($class->isInterface() || $class->isEnum()) {
                 continue;
             }
             self::assertTrue($class->isFinal(), $name . ' must be final');

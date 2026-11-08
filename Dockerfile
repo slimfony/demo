@@ -27,7 +27,8 @@ COPY src ./src
 COPY config ./config
 COPY public ./public
 RUN composer dump-autoload --no-dev --no-interaction --classmap-authoritative \
-    && vendor/bin/slimfony warmup config/api/services.php config/api/routes.php var/cache/api
+    && vendor/bin/slimfony warmup config/api/services.php config/api/routes.php var/cache/api \
+    && vendor/bin/slimfony warmup config/idp/services.php config/idp/routes.php var/cache/idp
 
 # ---- runtime: only what is needed to run
 FROM base AS runtime
@@ -35,5 +36,6 @@ WORKDIR /app
 COPY --from=build /app /app
 COPY ui /app/ui
 COPY docker/Caddyfile /etc/frankenphp/Caddyfile
+COPY docker/Caddyfile.idp /etc/frankenphp/Caddyfile.idp
 USER app
 EXPOSE 8080 8443

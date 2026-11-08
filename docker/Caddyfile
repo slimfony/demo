@@ -50,7 +50,16 @@
 	log
 
 	# the api: the PHP worker answers
-	@backend path /api/* /healthz /readyz /metrics
+	@upload path /api/imports /public/drop
+	handle @upload {
+		request_body {
+			max_size 1MB
+		}
+		root * /app/public
+		php_server
+	}
+
+	@backend path /api/* /public/* /healthz /readyz /metrics
 	handle @backend {
 		request_body {
 			max_size 64KB

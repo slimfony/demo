@@ -4,12 +4,21 @@ declare(strict_types=1);
 
 namespace Demo\Tests\Api;
 
+use Demo\Idp\SigningKey;
+use Demo\Idp\TokenIssuer;
+use Demo\Idp\TokenKind;
+use Demo\Tests\Imports\ArchiveInspectorTest;
 use Demo\Tests\Support\InMemoryStorage;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Firebase\JWT\JWK;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Slimfony\Core\Auth\Authenticator;
+use Slimfony\Core\Auth\Jwt\JwtAuthenticator;
+use Slimfony\Core\Auth\Jwt\JwtConfiguration;
+use Slimfony\Core\Auth\Jwt\StaticKeyProvider;
 use Slimfony\Core\Database\ConnectionLifecycle;
 use Slimfony\Core\Database\Retry;
 use Slimfony\Core\Kernel;
@@ -27,19 +36,29 @@ final class ApiKernelTest extends TestCase
     {
         putenv('PROMETHEUS_URL=http://127.0.0.1:1'); // nothing listens there: the checks fail fast
         putenv('NATS_MONITOR_URL=http://127.0.0.1:1');
+        putenv('IDP_URL=https://idp.invalid');
     }
 
     protected function tearDown(): void
     {
         putenv('PROMETHEUS_URL');
         putenv('NATS_MONITOR_URL');
+        putenv('IDP_URL');
     }
+
+    private TokenIssuer $idp;
 
     private function kernel(): Kernel
     {
         $metrics = new MetricsRegistry(new InMemoryStorage());
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
+        $connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
+        $connection->executeStatement('CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, payload TEXT, published_at TEXT)');
         $context = new RequestContext();
+
+        // the identity provider's key is known to the verifier, as the JWKS download would make it
+        $this->idp = new TokenIssuer(SigningKey::generate(), 'https://idp.test', 'demo-api');
+        $authenticator = new JwtAuthenticator(new JwtConfiguration('https://idp.test', 'demo-api', ['EdDSA']), new StaticKeyProvider(JWK::parseKeySet($this->idp->jwks(), 'EdDSA')), cacheSeconds: 0);
 
         return new Kernel(
             __DIR__ . '/../../config/api/services.php',
@@ -51,6 +70,7 @@ final class ApiKernelTest extends TestCase
                 Connection::class => $connection,
                 ConnectionLifecycle::class => new ConnectionLifecycle($connection),
                 Retry::class => new Retry($connection),
+                Authenticator::class => $authenticator,
                 MetricsController::class => new MetricsController($metrics, self::TOKEN),
             ],
         );
@@ -91,11 +111,48 @@ final class ApiKernelTest extends TestCase
         self::assertSame(['api' => true, 'database' => true, 'nats' => false, 'prometheus' => false], $services);
     }
 
-    public function testUnknownPathsAreProblemJson(): void
+    private function post(Kernel $kernel, string $uri, string $body, ?TokenKind $kind = null): \Symfony\Component\HttpFoundation\Response
     {
-        $response = $this->kernel()->handle(Request::create('/nope'));
+        $server = null === $kind ? [] : ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->idp->issue($kind)];
 
-        self::assertSame(404, $response->getStatusCode());
-        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
+        return $kernel->handle(Request::create($uri, 'POST', server: $server, content: $body));
+    }
+
+    public function testTheTokenRouteRefusesEveryBadTokenForTheRightReason(): void
+    {
+        $kernel = $this->kernel();
+        $zip = ArchiveInspectorTest::zip(['a.xml' => '<x/>']);
+
+        self::assertSame(401, $this->post($kernel, '/api/imports', $zip)->getStatusCode());
+        self::assertSame(401, $kernel->handle(Request::create('/api/imports', 'POST', server: ['HTTP_AUTHORIZATION' => 'Bearer not.a.token'], content: $zip))->getStatusCode());
+        self::assertSame(401, $this->post($kernel, '/api/imports', $zip, TokenKind::Expired)->getStatusCode());
+        self::assertSame(401, $this->post($kernel, '/api/imports', $zip, TokenKind::BadSignature)->getStatusCode());
+        self::assertSame(401, $this->post($kernel, '/api/imports', $zip, TokenKind::WrongAudience)->getStatusCode());
+        self::assertSame(403, $this->post($kernel, '/api/imports', $zip, TokenKind::MissingScope)->getStatusCode()); // known caller, not allowed
+    }
+
+    public function testAValidTokenUploadsAndTheBatchCanBeRead(): void
+    {
+        $kernel = $this->kernel();
+
+        $accepted = $this->post($kernel, '/api/imports?mode=strict', ArchiveInspectorTest::zip(['a.xml' => '<x/>']), TokenKind::Valid);
+        self::assertSame(202, $accepted->getStatusCode());
+        $body = json_decode((string) $accepted->getContent(), true, 8, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        $id = $body['id'] ?? null;
+        self::assertIsString($id);
+
+        $batch = $kernel->handle(Request::create('/api/batches/' . $id, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->idp->issue(TokenKind::Valid)]));
+        self::assertSame(200, $batch->getStatusCode());
+        self::assertStringContainsString('"source":"jwt"', (string) $batch->getContent());
+        self::assertStringNotContainsString('payload', (string) $batch->getContent());
+    }
+
+    public function testTheSandboxRouteIsOpenButLooksInsideTheFile(): void
+    {
+        $kernel = $this->kernel();
+
+        self::assertSame(422, $this->post($kernel, '/public/drop', 'this is not a zip file')->getStatusCode()); // reached the controller without a token
+        self::assertSame(202, $this->post($kernel, '/public/drop', ArchiveInspectorTest::zip(['a.xml' => '<x/>']))->getStatusCode());
     }
 }

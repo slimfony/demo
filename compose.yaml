@@ -11,6 +11,7 @@ volumes:
   natsdata:
   promdata:
   grafanadata:
+  idpdata: # Caddy's data of the identity provider: holds the CA the api trusts
 
 services:
   # Generates the random secrets once into the "secrets" volume. Nothing secret is in the repository.
@@ -51,6 +52,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - secrets:/secrets:ro
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-guards.sql:ro
+      - ./docker/postgres/20-schema.sql:/docker-entrypoint-initdb.d/20-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
       interval: 5s
@@ -88,6 +90,31 @@ services:
       retries: 20
     mem_limit: 128m
 
+  # The demo identity provider: publishes its keys (JWKS) and hands out demo tokens. Same image, other entry script.
+  idp:
+    <<: *service
+    image: slimfony-demo:dev
+    command: ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile.idp", "--adapter", "caddyfile"]
+    environment:
+      LOG_LEVEL: info
+      JWT_ISSUER: https://idp:8443
+      JWT_AUDIENCE: slimfony-demo
+    volumes:
+      - idpdata:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /config:uid=10001,gid=10001
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSk --resolve idp:8443:127.0.0.1 https://idp:8443/healthz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    mem_limit: 256m
+
   web:
     <<: *service
     build:
@@ -98,6 +125,8 @@ services:
       init:
         condition: service_completed_successfully
       pgbouncer:
+        condition: service_healthy
+      idp:
         condition: service_healthy
     ports:
       - "8080:8080"
@@ -112,8 +141,13 @@ services:
       METRICS_TOKEN_FILE: /secrets/metrics_token
       PROMETHEUS_URL: http://prometheus:9090
       NATS_MONITOR_URL: http://nats:8222
+      IDP_URL: https://idp:8443
+      JWKS_URI: https://idp:8443/.well-known/jwks.json
+      JWT_ISSUER: https://idp:8443
+      JWT_AUDIENCE: slimfony-demo
     volumes:
       - secrets:/secrets:ro
+      - idpdata:/idp-ca:ro
     read_only: true
     tmpfs:
       - /tmp
