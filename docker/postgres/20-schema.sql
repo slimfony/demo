@@ -1,0 +1,25 @@
+-- Uploaded ZIP files. The ZIP itself is kept in the row (a few KB each), so the importers need no shared file system.
+CREATE TABLE batches (
+    id          uuid        PRIMARY KEY,
+    sha256      text        NOT NULL,
+    mode        text        NOT NULL CHECK (mode IN ('partial', 'strict')),
+    status      text        NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'running', 'done', 'failed')),
+    source      text        NOT NULL CHECK (source IN ('jwt', 'public')),
+    subject     text,
+    token_kid   text,
+    size_bytes  integer     NOT NULL,
+    entries     integer     NOT NULL,
+    payload     bytea       NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX batches_created_at ON batches (created_at);
+
+-- Written in the same transaction as the batch; a relay publishes the rows to NATS.
+CREATE TABLE outbox (
+    id           bigserial   PRIMARY KEY,
+    topic        text        NOT NULL,
+    payload      jsonb       NOT NULL,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    published_at timestamptz
+);
+CREATE INDEX outbox_unpublished ON outbox (id) WHERE published_at IS NULL;
