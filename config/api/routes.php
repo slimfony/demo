@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Demo\Api\Controller\BatchController;
 use Demo\Api\Controller\DemoTokenController;
 use Demo\Api\Controller\RuntimeController;
+use Demo\Api\Controller\SampleArchiveController;
 use Demo\Api\Controller\StatsController;
 use Demo\Api\Controller\StatusController;
 use Demo\Api\Controller\UploadController;
@@ -24,6 +25,7 @@ return static function (RouteCollection $r): void {
     $r->add('api_runtime', new Route('/api/runtime', $public(RuntimeController::class), methods: ['GET']));
     $r->add('api_status', new Route('/api/status', $public(StatusController::class), methods: ['GET']));
     $r->add('api_stats', new Route('/api/stats', $public(StatsController::class), methods: ['GET']));
+    $r->add('api_sample', new Route('/api/sample.zip', $public(SampleArchiveController::class), methods: ['GET']));
     $r->add('api_demo_token', new Route('/api/demo-token', $public(DemoTokenController::class), methods: ['POST']));
 
     // Two ways in: with a token (the caller is known) and anonymously (sandbox with tighter limits).

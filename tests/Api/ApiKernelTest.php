@@ -148,6 +148,15 @@ final class ApiKernelTest extends TestCase
         self::assertStringNotContainsString('payload', (string) $batch->getContent());
     }
 
+    public function testTheSampleZipIsWhatTheSandboxAccepts(): void
+    {
+        $kernel = $this->kernel();
+
+        $sample = $kernel->handle(Request::create('/api/sample.zip?files=4'));
+        self::assertSame(200, $sample->getStatusCode());
+        self::assertSame(202, $this->post($kernel, '/public/drop', (string) $sample->getContent())->getStatusCode());
+    }
+
     public function testTheSandboxRouteIsOpenButLooksInsideTheFile(): void
     {
         $kernel = $this->kernel();

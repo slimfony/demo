@@ -102,6 +102,9 @@ select { appearance: none; font: inherit; font-size: 17px; color: var(--text); b
 .progress { height: 4px; margin-top: 24px; background: var(--grouped); border-radius: 2px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: var(--accent); transition: width .15s linear; }
 
+.list dd.ok { color: var(--ok); }
+.list dd.bad { color: var(--bad); }
+
 .columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 28px; }
 .columns p { margin: 0; color: var(--text-2); font-size: 15px; }
 

@@ -82,6 +82,33 @@
       </dl>
     </section>
 
+    <section class="wrap block" id="upload" aria-labelledby="upload-title">
+      <h2 id="upload-title">Upload</h2>
+      <p class="sub">Send a small ZIP to the API and see who gets in. With a valid token the upload is accepted and recorded under the sender. Every broken token is refused for its own reason. The sandbox needs no token, but takes only small files.</p>
+
+      <form id="upload-form" class="form">
+        <label>Send as
+          <select name="kind">
+            <option value="valid" selected>Valid token</option>
+            <option value="sandbox">Anonymous sandbox</option>
+            <option value="expired">Expired token</option>
+            <option value="bad_signature">Forged token</option>
+            <option value="wrong_audience">Token for another service</option>
+            <option value="missing_scope">Token without permission</option>
+          </select>
+        </label>
+        <label>If a statement fails
+          <select name="mode">
+            <option value="partial" selected>Keep the good ones</option>
+            <option value="strict">Roll back the whole ZIP</option>
+          </select>
+        </label>
+        <button type="submit" id="upload-start" class="button"><span>Send ZIP</span></button>
+      </form>
+
+      <dl class="list" id="upload-results" hidden aria-live="polite"></dl>
+    </section>
+
     <section class="wrap block" id="live" aria-labelledby="live-title">
       <h2 id="live-title">Live</h2>
       <p class="sub">Prometheus reads the service every two seconds.</p>

@@ -3,6 +3,7 @@ import { startLive } from './live.js';
 import { runLoad } from './loadgen.js';
 import { startRuntime } from './runtime.js';
 import { startStatus } from './status.js';
+import { setupUpload } from './upload.js';
 
 const CONCURRENCY = 6; // what a browser allows per host over HTTP/1.1
 
@@ -55,3 +56,4 @@ if (window.uPlot) {
   window.addEventListener('load', startLive, { once: true });
 }
 setupPush();
+setupUpload();
