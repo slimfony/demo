@@ -1,0 +1,43 @@
+# The demo identity provider: HTTPS inside the compose network with a certificate from Caddy's own CA.
+# The api trusts that CA's root certificate (a shared volume), so the JWKS download is verified like any other.
+{
+	admin off
+	auto_https disable_redirects
+	skip_install_trust
+
+	servers {
+		timeouts {
+			read_header 5s
+			read_body 10s
+			write 10s
+			idle 1m
+		}
+	}
+
+	log {
+		output stdout
+		format json
+		level WARN
+	}
+
+	frankenphp {
+		num_threads 3
+		worker {
+			file /app/public/idp.php
+			num 2
+			env MAX_REQUESTS 5000
+		}
+	}
+}
+
+idp:8443 {
+	tls internal
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+	}
+	root * /app/public
+	php_server {
+		index idp.php # every request goes to the identity provider's script, not to the api's index.php
+	}
+}
