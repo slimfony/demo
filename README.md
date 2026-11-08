@@ -20,6 +20,7 @@ Docker needs about 3 GB of memory for this stack.
 | `web` | FrankenPHP with 4 PHP workers, serves the API and the static page |
 | `postgres` + `pgbouncer` | database, reached through a transaction pooler |
 | `idp` | small identity provider: publishes its keys (JWKS) over HTTPS and hands out demo tokens |
+| `relay` | command line process that publishes the outbox rows to NATS JetStream (several can run side by side) |
 | `nats` | JetStream message broker |
 | `prometheus` + `grafana` | metrics, scraped every 2 seconds, with a provisioned dashboard |
 | `init` | generates random secrets into a volume once; nothing secret is in the repository |
@@ -52,7 +53,7 @@ bash scripts/e2e.sh  # starts the stack and checks it
 
 ## Status
 
-Done: the stack, the API above, authentication with the identity provider, both upload paths and the page. Next: the relay that publishes the outbox to NATS, the importer (statement parsing, per-statement transactions, concurrent importers), the live tile grid with a log view, and the k6 benchmark.
+Done: the stack, the API above, authentication with the identity provider, both upload paths and the page. The outbox relay publishes every accepted upload to a NATS JetStream stream, at least once, with the row id as message id so repeats are dropped. Next: the importer (statement parsing, per-statement transactions, concurrent importers), the live tile grid with a log view, and the k6 benchmark.
 
 ## License
 
