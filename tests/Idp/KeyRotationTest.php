@@ -34,15 +34,16 @@ final class KeyRotationTest extends TestCase
     {
         $issuer = new TokenIssuer(new InMemoryKeySet(SigningKey::generate()), 'https://idp.test', 'demo-api');
         $beforeRotation = $issuer->issue(TokenKind::Valid);
+        $firstKid = $issuer->jwks()['keys'][0]['kid'];
         self::assertTrue($this->accepted($issuer, $beforeRotation));
 
         $issuer->rotate();
-        self::assertCount(2, $issuer->jwks()['keys']);
+        self::assertContains($firstKid, array_column($issuer->jwks()['keys'], 'kid'));
         self::assertTrue($this->accepted($issuer, $beforeRotation), 'a token signed before the rotation is still good');
         self::assertTrue($this->accepted($issuer, $issuer->issue(TokenKind::Valid)), 'and so is one signed with the new key');
 
         $issuer->rotate();
-        self::assertCount(2, $issuer->jwks()['keys']);
+        self::assertNotContains($firstKid, array_column($issuer->jwks()['keys'], 'kid'));
         self::assertFalse($this->accepted($issuer, $beforeRotation), 'two rotations later the first key is gone');
     }
 }
