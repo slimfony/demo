@@ -10,7 +10,14 @@ CREATE TABLE batches (
     size_bytes  integer     NOT NULL,
     entries     integer     NOT NULL,
     payload     bytea       NOT NULL,
-    created_at  timestamptz NOT NULL DEFAULT now()
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    -- filled by the importer
+    worker             text,
+    started_at         timestamptz,
+    finished_at        timestamptz,
+    statements_ok      integer NOT NULL DEFAULT 0,
+    statements_failed  integer NOT NULL DEFAULT 0,
+    entries_booked     integer NOT NULL DEFAULT 0
 );
 CREATE INDEX batches_created_at ON batches (created_at);
 

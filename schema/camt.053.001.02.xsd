@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A reduced version of ISO 20022 camt.053.001.02 (BankToCustomerStatement).
+  Same namespace and element names as the standard, only the subset this demo reads:
+  one statement per document, with its group header, account, two balances and the entries.
+  It is not the full ISO schema; the standard's own schema is not copied here.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02"
+           targetNamespace="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02"
+           elementFormDefault="qualified">
+
+  <xs:simpleType name="IBAN2007Identifier">
+    <xs:restriction base="xs:string"><xs:pattern value="[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CurrencyCode">
+    <xs:restriction base="xs:string"><xs:pattern value="[A-Z]{3}"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Max35Text">
+    <xs:restriction base="xs:string"><xs:minLength value="1"/><xs:maxLength value="35"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Max140Text">
+    <xs:restriction base="xs:string"><xs:minLength value="1"/><xs:maxLength value="140"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CreditDebitCode">
+    <xs:restriction base="xs:string"><xs:enumeration value="CRDT"/><xs:enumeration value="DBIT"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="BalanceCode">
+    <xs:restriction base="xs:string"><xs:enumeration value="OPBD"/><xs:enumeration value="CLBD"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="DecimalAmount">
+    <xs:restriction base="xs:decimal">
+      <xs:fractionDigits value="2"/>
+      <xs:totalDigits value="18"/>
+      <xs:minInclusive value="0"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ActiveCurrencyAndAmount">
+    <xs:simpleContent>
+      <xs:extension base="DecimalAmount">
+        <xs:attribute name="Ccy" type="CurrencyCode" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="DateAndDateTimeChoice">
+    <xs:sequence><xs:element name="Dt" type="xs:date"/></xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AccountIdentification">
+    <xs:sequence><xs:element name="IBAN" type="IBAN2007Identifier"/></xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CashAccount">
+    <xs:sequence>
+      <xs:element name="Id" type="AccountIdentification"/>
+      <xs:element name="Ccy" type="CurrencyCode" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GroupHeader">
+    <xs:sequence>
+      <xs:element name="MsgId" type="Max35Text"/>
+      <xs:element name="CreDtTm" type="xs:dateTime"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BalanceType">
+    <xs:sequence>
+      <xs:element name="CdOrPrtry">
+        <xs:complexType><xs:sequence><xs:element name="Cd" type="BalanceCode"/></xs:sequence></xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CashBalance">
+    <xs:sequence>
+      <xs:element name="Tp" type="BalanceType"/>
+      <xs:element name="Amt" type="ActiveCurrencyAndAmount"/>
+      <xs:element name="CdtDbtInd" type="CreditDebitCode"/>
+      <xs:element name="Dt" type="DateAndDateTimeChoice"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RelatedParties">
+    <xs:sequence>
+      <xs:element name="DbtrAcct" type="CashAccount" minOccurs="0"/>
+      <xs:element name="CdtrAcct" type="CashAccount" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EntryDetails">
+    <xs:sequence>
+      <xs:element name="TxDtls">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="RltdPties" type="RelatedParties" minOccurs="0"/>
+            <xs:element name="RmtInf" minOccurs="0">
+              <xs:complexType><xs:sequence><xs:element name="Ustrd" type="Max140Text"/></xs:sequence></xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReportEntry">
+    <xs:sequence>
+      <xs:element name="NtryRef" type="Max35Text"/>
+      <xs:element name="Amt" type="ActiveCurrencyAndAmount"/>
+      <xs:element name="CdtDbtInd" type="CreditDebitCode"/>
+      <xs:element name="BookgDt" type="DateAndDateTimeChoice"/>
+      <xs:element name="NtryDtls" type="EntryDetails" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AccountStatement">
+    <xs:sequence>
+      <xs:element name="Id" type="Max35Text"/>
+      <xs:element name="CreDtTm" type="xs:dateTime"/>
+      <xs:element name="FrToDt">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="FrDtTm" type="xs:dateTime"/>
+            <xs:element name="ToDtTm" type="xs:dateTime"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Acct" type="CashAccount"/>
+      <xs:element name="Bal" type="CashBalance" minOccurs="2" maxOccurs="2"/>
+      <xs:element name="Ntry" type="ReportEntry" minOccurs="0" maxOccurs="500"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="Document">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="BkToCstmrStmt">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="GrpHdr" type="GroupHeader"/>
+              <xs:element name="Stmt" type="AccountStatement"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
