@@ -7,7 +7,9 @@ namespace Demo\Tests\Api;
 use Demo\Idp\SigningKey;
 use Demo\Idp\TokenIssuer;
 use Demo\Idp\TokenKind;
+use Demo\Imports\RateLimiter;
 use Demo\Tests\Imports\ArchiveInspectorTest;
+use Demo\Tests\Support\ArrayWindowCounter;
 use Demo\Tests\Support\InMemoryStorage;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
@@ -71,6 +73,7 @@ final class ApiKernelTest extends TestCase
                 ConnectionLifecycle::class => new ConnectionLifecycle($connection),
                 Retry::class => new Retry($connection),
                 Authenticator::class => $authenticator,
+                RateLimiter::class => new RateLimiter(new ArrayWindowCounter(), 3), // a small limit, to hit it
                 MetricsController::class => new MetricsController($metrics, self::TOKEN),
             ],
         );
@@ -155,6 +158,20 @@ final class ApiKernelTest extends TestCase
         $sample = $kernel->handle(Request::create('/api/sample.zip?files=4'));
         self::assertSame(200, $sample->getStatusCode());
         self::assertSame(202, $this->post($kernel, '/public/drop', (string) $sample->getContent())->getStatusCode());
+    }
+
+    public function testTheSandboxIsRationedPerClientButATokenIsNot(): void
+    {
+        $kernel = $this->kernel();
+        $zip = ArchiveInspectorTest::zip(['a.xml' => '<x/>']);
+
+        foreach ([202, 202, 202] as $expected) {
+            self::assertSame($expected, $this->post($kernel, '/public/drop', $zip)->getStatusCode());
+        }
+        $limited = $this->post($kernel, '/public/drop', $zip);
+        self::assertSame(429, $limited->getStatusCode());
+        self::assertNotNull($limited->headers->get('Retry-After'));
+        self::assertSame(202, $this->post($kernel, '/api/imports', $zip, TokenKind::Valid)->getStatusCode());
     }
 
     public function testTheSandboxRouteIsOpenButLooksInsideTheFile(): void

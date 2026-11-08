@@ -22,7 +22,12 @@ FROM base AS build
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --no-progress --no-scripts --classmap-authoritative
+# a download can time out on a busy network (and composer under ZTS PHP then sometimes aborts): try three times
+ENV COMPOSER_MAX_PARALLEL_HTTP=4 COMPOSER_PROCESS_TIMEOUT=600
+RUN for attempt in 1 2 3; do \
+        composer install --no-dev --no-interaction --no-progress --no-scripts --classmap-authoritative && exit 0; \
+        echo "composer install failed (attempt $attempt)"; sleep 5; \
+    done; exit 1
 COPY src ./src
 COPY config ./config
 COPY public ./public

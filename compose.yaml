@@ -53,6 +53,7 @@ services:
       - secrets:/secrets:ro
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-guards.sql:ro
       - ./docker/postgres/20-schema.sql:/docker-entrypoint-initdb.d/20-schema.sql:ro
+      - ./docker/postgres/30-import.sql:/docker-entrypoint-initdb.d/30-import.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
       interval: 5s
@@ -174,6 +175,7 @@ services:
       PROMETHEUS_URL: http://prometheus:9090
       NATS_MONITOR_URL: http://nats:8222
       IDP_URL: https://idp:8443
+      SANDBOX_RATE_LIMIT: "1200" # anonymous uploads per minute and client
       JWKS_URI: https://idp:8443/.well-known/jwks.json
       JWT_ISSUER: https://idp:8443
       JWT_AUDIENCE: slimfony-demo

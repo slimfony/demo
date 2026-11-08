@@ -8,6 +8,7 @@ use Demo\Imports\ArchiveInspector;
 use Demo\Imports\BatchRepository;
 use Demo\Imports\ImportMode;
 use Demo\Imports\ImportSource;
+use Demo\Imports\RateLimiter;
 use Demo\Imports\RejectedUpload;
 use Doctrine\DBAL\Connection;
 use Slimfony\Core\Auth\Principal;
@@ -34,6 +35,7 @@ final class UploadController
         private readonly ArchiveInspector $inspector,
         private readonly BatchRepository $batches,
         private readonly Retry $retry,
+        private readonly RateLimiter $sandboxLimit,
         MetricsRegistry $metrics,
     ) {
         $this->accepted = $metrics->counter('imports_accepted_total', 'Uploads that were stored.', ['source']);
@@ -49,6 +51,14 @@ final class UploadController
         $mode = ImportMode::tryFrom($request->query->getString('mode', ImportMode::Partial->value));
         if (null === $mode) {
             return new ProblemResponse(400, $requestId, 'The mode must be "partial" or "strict".');
+        }
+
+        // the anonymous sandbox is rationed per client; a caller with a verified token is not
+        $wait = ImportSource::Public === $source ? $this->sandboxLimit->retryAfter($request->getClientIp() ?? 'unknown') : null;
+        if (null !== $wait) {
+            $this->rejected->inc([$source->value, 'rate_limited']);
+
+            return new ProblemResponse(429, $requestId, 'Too many uploads to the sandbox. Wait a moment, or use a token.', ['Retry-After' => (string) $wait]);
         }
 
         try {

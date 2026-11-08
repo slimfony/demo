@@ -7,7 +7,9 @@ namespace Demo\Tests\Api\Controller;
 use Demo\Api\Controller\UploadController;
 use Demo\Imports\ArchiveInspector;
 use Demo\Imports\BatchRepository;
+use Demo\Imports\RateLimiter;
 use Demo\Tests\Imports\ArchiveInspectorTest;
+use Demo\Tests\Support\ArrayWindowCounter;
 use Demo\Tests\Support\InMemoryStorage;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
@@ -29,7 +31,7 @@ final class UploadControllerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
         $this->connection->executeStatement('CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, payload TEXT, published_at TEXT)');
-        $this->controller = new UploadController(new ArchiveInspector(), new BatchRepository(), new Retry($this->connection), new MetricsRegistry(new InMemoryStorage()));
+        $this->controller = new UploadController(new ArchiveInspector(), new BatchRepository(), new Retry($this->connection), new RateLimiter(new ArrayWindowCounter(), 1000), new MetricsRegistry(new InMemoryStorage()));
     }
 
     private function upload(string $source, string $body, string $query = ''): Request

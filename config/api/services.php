@@ -11,6 +11,7 @@ use Demo\Api\Controller\StatusController;
 use Demo\Api\Controller\UploadController;
 use Demo\Imports\ArchiveInspector;
 use Demo\Imports\BatchRepository;
+use Demo\Imports\RateLimiter;
 use Demo\Infrastructure\Http\HttpReadinessCheck;
 use Demo\Infrastructure\Idp\HttpTokenSource;
 use Demo\Infrastructure\Idp\TokenSource;
@@ -46,6 +47,7 @@ return static function (ContainerBuilder $c): void {
     $c->register(ConnectionLifecycle::class)->setSynthetic(true)->setPublic(true)->addTag(ResetPass::TAG);
     $c->register(Retry::class)->setSynthetic(true)->setPublic(true);
     $c->register(MetricsController::class)->setSynthetic(true)->setPublic(true);
+    $c->register(RateLimiter::class)->setSynthetic(true)->setPublic(true); // the limit comes from the environment
 
     // The middleware chain, outermost first.
     $c->register(MetricsMiddleware::class)->setAutowired(true);
