@@ -55,9 +55,11 @@ final class ApiKernelFactory
         $this->env->string('PROMETHEUS_URL');
         $this->env->string('NATS_MONITOR_URL');
         $this->env->string('IDP_URL');
+        $keys = new JwksKeyProvider($this->env->string('JWKS_URI'), $logger, minRefetchSeconds: 2); // a new key id is looked up at once (at most every two seconds)
+        $keys->keyFor('warm-up'); // load the provider's keys now: the first requests must not find the key list empty while another thread is still fetching it
         $authenticator = new JwtAuthenticator(
             new JwtConfiguration($this->env->string('JWT_ISSUER'), $this->env->string('JWT_AUDIENCE'), ['EdDSA']), // only the algorithm the identity provider signs with
-            new JwksKeyProvider($this->env->string('JWKS_URI'), $logger, minRefetchSeconds: 2), // a new key id is looked up at once (at most every two seconds)
+            $keys,
             $logger,
         );
 

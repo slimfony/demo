@@ -1,9 +1,15 @@
+import { startBatches } from './batches.js';
+import { on, startEvents } from './events.js';
 import { formatInteger, formatMilliseconds } from './format.js';
 import { startLive } from './live.js';
 import { runLoad } from './loadgen.js';
+import { setupLogView } from './logview.js';
 import { setupMenus } from './menu.js';
+import { setupPresent } from './present.js';
+import { setupRun } from './run.js';
 import { startRuntime } from './runtime.js';
 import { startStatus } from './status.js';
+import { setupTour } from './tour.js';
 import { setupUpload } from './upload.js';
 
 const CONCURRENCY = 6; // what a browser allows per host over HTTP/1.1
@@ -59,3 +65,9 @@ if (window.uPlot) {
 setupPush();
 setupUpload();
 setupMenus();
+on('log', setupLogView());
+setupRun();
+startEvents();
+startBatches();
+setupPresent();
+setupTour();

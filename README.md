@@ -13,6 +13,13 @@ docker compose up -d --build --wait
 
 Docker needs about 3 GB of memory for this stack.
 
+## On the page
+
+- **Import.** Press *Start import*: the page generates up to 1,000 ZIPs of 10 statements each and uploads them to the API (19 in 20 with a token, the rest through the anonymous sandbox). One tile per ZIP shows where it is: waiting, importing, booked, booked with rejected statements, rolled back, refused. A shield marks the uploads that came with a verified token. Numbers, a result card and a live log of the services follow.
+- **Tokens and keys.** Send a ZIP with a valid or a broken token and see why it is refused. Rotate the identity provider's signing key and see the API pick up the new one.
+- **Send requests.** The browser sends a few thousand requests to the API as fast as it can.
+- **Live** (requests per second and latency from Prometheus), **Batches** (the latest ZIPs), **Present** (a big-screen view) and a short guided tour.
+
 ## The demo case: importing bank statements
 
 A bank sends its customers' account statements as ZIP files. Each ZIP holds XML files in the ISO 20022 **CAMT.053** format (a reduced version of the schema is in [schema/](schema/)), one statement per file. The service has to take thousands of these in at once and book every statement correctly.
@@ -35,6 +42,7 @@ The statements come from a generator that makes valid files and, on request, fil
 | `postgres` + `pgbouncer` | database, reached through a transaction pooler |
 | `idp` | small identity provider: publishes its keys (JWKS) over HTTPS and hands out demo tokens |
 | `relay` | command line process that publishes the outbox rows to NATS JetStream (several can run side by side) |
+| `importer` (4 replicas) | take batches from NATS and book the statements; `docker compose up --scale importer=8` runs more |
 | `nats` | JetStream message broker |
 | `prometheus` + `grafana` | metrics, scraped every 2 seconds, with a provisioned dashboard |
 | `init` | generates random secrets into a volume once; nothing secret is in the repository |
@@ -50,6 +58,9 @@ The containers run as a non-root user, with a read-only file system, no capabili
 | `GET /api/runtime` | PHP, JIT, server and core versions, uptime, memory |
 | `GET /api/status` | state of every dependency |
 | `GET /api/stats` | requests per second, p95 and total, read from Prometheus |
+| `GET /api/sample.zip?seed=&files=&fault_rate=&fault=` | a ZIP of generated CAMT.053 statements (the same seed gives the same ZIP; some can be made wrong on purpose) |
+| `GET /api/batches`, `GET /api/import/summary` | the latest batches, and what the importers have done so far (public) |
+| `POST /api/demo-rotate` | the identity provider starts signing with a new key |
 | `POST /api/demo-token?kind=…` | a token from the demo identity provider: `valid`, `expired`, `bad_signature`, `wrong_audience` or `missing_scope` |
 | `POST /api/imports?mode=partial\|strict` | upload a ZIP of statements; needs a valid token with scope `import:write` |
 | `POST /public/drop` | the same upload without a token: anonymous sandbox with tighter limits |
@@ -67,7 +78,7 @@ bash scripts/e2e.sh  # starts the stack and checks it
 
 ## Status
 
-Done: the stack, the API above, authentication with the identity provider, both upload paths and the page. The outbox relay publishes every accepted upload to a NATS JetStream stream, at least once, with the row id as message id so repeats are dropped. Next: the importer (statement parsing, per-statement transactions, concurrent importers), the live tile grid with a log view, and the k6 benchmark.
+Done: the stack, the API, authentication with key rotation, both upload paths, the outbox relay, the importers (reduced CAMT.053 schema, business rules, `partial` and `strict` mode, deadlock retries) and the page with the live import view. Next: chaos switches (kill a connection, force a deadlock), importer dashboards in Grafana, the k6 benchmark, Kubernetes manifests and the template repository.
 
 ## License
 

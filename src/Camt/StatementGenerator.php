@@ -13,7 +13,7 @@ use Random\Randomizer;
  */
 final class StatementGenerator
 {
-    public const int ACCOUNTS = 12;
+    public const int ACCOUNTS = 60;
     public const string PERIOD_FROM = '2026-10-01';
     public const string PERIOD_TO = '2026-10-31';
 

@@ -49,6 +49,25 @@ export function setupUpload() {
   const button = document.getElementById('upload-start');
   const results = document.getElementById('upload-results');
 
+  document.getElementById('upload-rotate').addEventListener('click', async () => {
+    const item = document.createElement('div');
+    const label = Object.assign(document.createElement('dt'), { textContent: 'Identity provider' });
+    const result = document.createElement('dd');
+    try {
+      const response = await fetch('/api/demo-rotate', { method: 'POST', cache: 'no-store' });
+      if (!response.ok) throw new Error('refused');
+      const { kid } = await response.json();
+      result.className = 'ok';
+      result.textContent = `Now signing with key ${kid.slice(0, 8)}. The next token carries it; the API fetches the new key list when it first sees it. Tokens signed before still work.`;
+    } catch {
+      result.className = 'bad';
+      result.textContent = 'The identity provider did not answer.';
+    }
+    item.append(label, result);
+    results.prepend(item);
+    results.hidden = false;
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const { kind, mode } = Object.fromEntries(new FormData(form));

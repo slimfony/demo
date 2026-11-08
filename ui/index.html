@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/vendor/uplot/uPlot.min.css">
   <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/demo.css">
   <script src="/vendor/uplot/uPlot.iife.min.js" defer></script>
   <script type="module" src="/js/main.js"></script>
 </head>
@@ -23,12 +24,15 @@
         <details class="menu" id="try-menu">
           <summary>Try it</summary>
           <div class="menu-list">
+            <a href="#import">Import statements</a>
             <a href="#push">Send requests</a>
-            <a href="#upload">Upload a ZIP</a>
+            <a href="#upload">Tokens and keys</a>
           </div>
         </details>
         <a href="#live">Live</a>
+        <a href="#batches">Batches</a>
         <a href="#about">About</a>
+        <button type="button" id="present-toggle" class="nav-button" aria-pressed="false">Present</button>
         <button type="button" id="theme-toggle" class="theme" aria-label="Switch to dark mode">
           <svg class="i-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
           <svg class="i-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -42,6 +46,7 @@
       <h1>PHP never left.<br>It got fast.</h1>
       <p class="lead">This page is served by a PHP worker that stays in memory between requests. Every number on it is read from the running system.</p>
       <p class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="status-text">Checking…</span></p>
+      <p class="hero-actions"><button type="button" id="tour-start" class="link-button">Take a quick tour</button></p>
     </section>
 
     <section class="wrap block" aria-label="Runtime">
@@ -55,6 +60,90 @@
       </dl>
     </section>
 
+    <section class="wrap block keep" id="import" aria-labelledby="import-title">
+      <h2 id="import-title">Import</h2>
+      <p class="sub">A bank sends its customers' statements as ZIP files of ISO 20022 CAMT.053 XML. Press the button and this page generates the ZIPs and uploads them to the API, as any client would. Importers book every statement in its own transaction while you watch.</p>
+
+      <form id="run-form" class="form">
+        <label>ZIP files
+          <select name="zips">
+            <option value="1000" selected>1,000 (10 statements each)</option>
+            <option value="200">200</option>
+            <option value="50">50</option>
+          </select>
+        </label>
+        <label>Statements that are wrong
+          <select name="faults">
+            <option value="0">None</option>
+            <option value="0.03" selected>3 in 100</option>
+            <option value="0.15">15 in 100</option>
+          </select>
+        </label>
+        <label>When one is wrong
+          <select name="mode">
+            <option value="partial" selected>Keep the good ones</option>
+            <option value="strict">Roll back the whole ZIP</option>
+          </select>
+        </label>
+        <button type="submit" id="run-start" class="button"><span>Start import</span></button>
+      </form>
+
+      <div class="progress" aria-hidden="true"><div class="progress-bar" id="run-bar"></div></div>
+      <p class="run-line" aria-live="polite">Uploaded <b id="p-uploaded">0</b> of <b id="p-total">0</b> · imported <b id="p-imported">0</b></p>
+
+      <div id="run-tiles" class="tiles" role="img" aria-label="One tile for every ZIP file, coloured by what happened to it"></div>
+      <ul class="legend" aria-label="What the tiles mean">
+        <li><i class="swatch queued"></i>waiting</li>
+        <li><i class="swatch running"></i>importing</li>
+        <li><i class="swatch done"></i>booked</li>
+        <li><i class="swatch problems"></i>booked, some rejected</li>
+        <li><i class="swatch failed"></i>rolled back</li>
+        <li><i class="swatch refused"></i>refused</li>
+        <li><i class="swatch shield"></i>uploaded with a token</li>
+      </ul>
+
+      <div class="numbers run-numbers">
+        <div><span class="num" id="s-booked">0</span><span class="cap">statements booked</span></div>
+        <div><span class="num" id="s-rejected">0</span><span class="cap">statements rejected</span></div>
+        <div><span class="num" id="s-rolled">0</span><span class="cap">good ones rolled back</span></div>
+        <div><span class="num" id="s-retries">0</span><span class="cap">deadlock retries</span></div>
+        <div><span class="num" id="s-rate">0</span><span class="cap">statements per second</span></div>
+      </div>
+
+      <div id="run-result" class="result" hidden>
+        <h3>Done in <span id="r-time">–</span></h3>
+        <dl class="list">
+          <div><dt>ZIP files</dt><dd id="r-zips">–</dd></div>
+          <div><dt>Statements booked</dt><dd><span id="r-booked">–</span> <span class="muted" id="r-statements-rate"></span></dd></div>
+          <div><dt>Entries booked</dt><dd id="r-entries">–</dd></div>
+          <div><dt>Good statements rolled back with their ZIP</dt><dd id="r-rolled">–</dd></div>
+          <div><dt>ZIPs refused at the door</dt><dd id="r-refused">–</dd></div>
+          <div><dt>Deadlocks the database ended, run again by the core</dt><dd id="r-retries">–</dd></div>
+          <div><dt>Importers that took part</dt><dd id="r-importers">–</dd></div>
+        </dl>
+        <p class="muted" id="r-reasons-title" hidden>Why statements were rejected</p>
+        <ul class="reasons" id="r-reasons"></ul>
+      </div>
+
+      <h3 class="log-title">Log</h3>
+      <div class="log-bar">
+        <p class="sub">What the API, the relay and the importers write, live.</p>
+        <span><button type="button" id="log-pause" class="small" aria-pressed="false">Pause</button> <button type="button" id="log-clear" class="small">Clear</button></span>
+      </div>
+      <div id="log-view" class="log" role="log" aria-label="Service log" tabindex="0"></div>
+
+      <details class="drawer">
+        <summary>Under the hood</summary>
+        <ol class="steps">
+          <li><b>The page</b> asks the API for a ZIP of generated statements and uploads it. 19 in 20 go with a token from the demo identity provider, the rest through the anonymous sandbox.</li>
+          <li><b>The API</b> checks the token (EdDSA, against the provider's published keys), looks inside the ZIP (size, file names, compression) and stores it in PostgreSQL together with an outbox row, in one transaction.</li>
+          <li><b>The relay</b> publishes each outbox row to NATS JetStream. Several relays can run; they skip rows another relay is working on.</li>
+          <li><b>The importers</b> (several, side by side) take a batch from the stream, check every file against the CAMT schema and the business rules, and book each statement in its own transaction. In strict mode the ZIP is one transaction with a savepoint per statement.</li>
+          <li><b>Deadlocks</b> happen because the importers update the same few accounts. The database ends one transaction; the core's retry runs it again. Nothing is lost.</li>
+          <li><b>This page</b> follows along through a Mercure hub in the web server. Prometheus scrapes every service every two seconds.</li>
+        </ol>
+      </details>
+    </section>
     <section class="wrap block" id="push" aria-labelledby="push-title">
       <h2 id="push-title">Try it</h2>
       <p class="sub">Your browser sends requests as fast as it can and the charts below react. A browser opens about six connections, so this is a taste. The real load test uses k6.</p>
@@ -89,7 +178,7 @@
     </section>
 
     <section class="wrap block" id="upload" aria-labelledby="upload-title">
-      <h2 id="upload-title">Upload</h2>
+      <h2 id="upload-title">Tokens and keys</h2>
       <p class="sub">Send a small ZIP to the API and see who gets in. With a valid token the upload is accepted and recorded under the sender. Every broken token is refused for its own reason. The sandbox needs no token, but takes only small files.</p>
 
       <form id="upload-form" class="form">
@@ -110,12 +199,13 @@
           </select>
         </label>
         <button type="submit" id="upload-start" class="button"><span>Send ZIP</span></button>
+        <button type="button" id="upload-rotate" class="button secondary"><span>Rotate the signing key</span></button>
       </form>
 
       <dl class="list" id="upload-results" hidden aria-live="polite"></dl>
     </section>
 
-    <section class="wrap block" id="live" aria-labelledby="live-title">
+    <section class="wrap block keep" id="live" aria-labelledby="live-title">
       <h2 id="live-title">Live</h2>
       <p class="sub">Prometheus reads the service every two seconds.</p>
 
@@ -131,6 +221,16 @@
       </div>
     </section>
 
+    <section class="wrap block" id="batches" aria-labelledby="batches-title">
+      <h2 id="batches-title">Batches</h2>
+      <p class="sub">The latest ZIP files, newest first.</p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>ZIP</th><th>Sent</th><th>Mode</th><th>Result</th><th>Booked / rejected</th><th>Time</th></tr></thead>
+          <tbody id="batch-rows"></tbody>
+        </table>
+      </div>
+    </section>
     <section class="wrap block" id="about" aria-labelledby="about-title">
       <h2 id="about-title">About</h2>
       <div class="columns">
@@ -141,6 +241,16 @@
     </section>
   </main>
 
+  <aside id="tour" class="tour" role="dialog" aria-label="Guided tour" hidden>
+    <p class="tour-step" id="tour-step"></p>
+    <h3 id="tour-title"></h3>
+    <p id="tour-text"></p>
+    <div class="tour-actions">
+      <button type="button" id="tour-back" class="small">Back</button>
+      <button type="button" id="tour-next" class="small primary">Next</button>
+      <button type="button" id="tour-close" class="small">Close</button>
+    </div>
+  </aside>
   <footer class="wrap foot">
     <p>Built on <a href="https://github.com/slimfony/core" rel="noopener">slimfony/core</a> <span data-fact="core"></span>. <a href="http://localhost:3000" rel="noopener">Open Grafana</a></p>
   </footer>

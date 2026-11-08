@@ -52,5 +52,5 @@ CREATE TABLE import_errors (
 CREATE INDEX import_errors_batch ON import_errors (batch_id);
 
 INSERT INTO accounts (iban, currency, booked_balance)
-SELECT 'HU' || lpad(i::text, 26, '0'), 'EUR', 100000.00 FROM generate_series(1, 12) AS i;
+SELECT 'HU' || lpad(i::text, 26, '0'), 'EUR', 100000.00 FROM generate_series(1, 60) AS i;
 INSERT INTO account_stats (iban) SELECT iban FROM accounts;
