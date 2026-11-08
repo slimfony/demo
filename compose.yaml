@@ -119,7 +119,7 @@ services:
   relay:
     <<: *service
     image: slimfony-demo:dev
-    command: ["php", "bin/relay"]
+    command: ["php", "-d", "apc.enable_cli=1", "bin/relay"]
     healthcheck:
       disable: true # the image's own check probes the web server; this process is its only process: if it dies, the container does
     depends_on:
@@ -137,6 +137,7 @@ services:
       DB_USER: demo
       DB_PASSWORD_FILE: /secrets/db_password
       NATS_HOST: nats
+      METRICS_TOKEN_FILE: /secrets/metrics_token
     volumes:
       - secrets:/secrets:ro
     read_only: true

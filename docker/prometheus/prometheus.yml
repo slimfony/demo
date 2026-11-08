@@ -10,3 +10,10 @@ scrape_configs:
       credentials_file: /secrets/metrics_token
     static_configs:
       - targets: ["web:8080"]
+  - job_name: relay
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /secrets/metrics_token
+    static_configs:
+      - targets: ["relay:9100"]

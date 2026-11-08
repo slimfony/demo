@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Demo\Outbox\OutboxRelay;
+use Demo\Relay\RelayWorker;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Database\ConnectionLifecycle;
@@ -16,5 +16,5 @@ return static function (ContainerBuilder $c): void {
     $c->register(RequestContext::class)->setSynthetic(true)->setPublic(true)->addTag(ResetPass::TAG);
     $c->register(Connection::class)->setSynthetic(true)->setPublic(true);
     $c->register(ConnectionLifecycle::class)->setSynthetic(true)->setPublic(true)->addTag(ResetPass::TAG);
-    $c->register(OutboxRelay::class)->setSynthetic(true)->setPublic(true);
+    $c->register(RelayWorker::class)->setSynthetic(true)->setPublic(true);
 };

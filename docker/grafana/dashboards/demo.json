@@ -603,6 +603,134 @@
                     "sort": "desc"
                 }
             }
+        },
+        {
+            "id": 11,
+            "type": "timeseries",
+            "title": "Outbox relay: published per second and waiting",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 20
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(outbox_published_total[10s]))",
+                    "legendFormat": "published / s",
+                    "refId": "A",
+                    "interval": "2s"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(outbox_pending)",
+                    "legendFormat": "waiting in the outbox",
+                    "refId": "B",
+                    "interval": "2s"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(outbox_failures_total[10s]))",
+                    "legendFormat": "failed turns / s",
+                    "refId": "C",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 12,
+                        "showPoints": "never",
+                        "spanNulls": true
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 12,
+            "type": "timeseries",
+            "title": "Uploads: accepted and refused by source and reason",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 20
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum by (source) (rate(imports_accepted_total[10s]))",
+                    "legendFormat": "accepted: {{source}}",
+                    "refId": "A",
+                    "interval": "2s"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum by (source, reason) (rate(imports_rejected_total[10s]))",
+                    "legendFormat": "refused: {{source}} {{reason}}",
+                    "refId": "B",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 12,
+                        "showPoints": "never",
+                        "spanNulls": true
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
         }
     ]
 }

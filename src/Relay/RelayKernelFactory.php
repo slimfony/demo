@@ -14,9 +14,13 @@ use Slimfony\Core\Config\Env;
 use Slimfony\Core\Database\ConnectionFactory;
 use Slimfony\Core\Database\ConnectionLifecycle;
 use Slimfony\Core\Database\Retry;
+use Slimfony\Core\Exception\ConfigurationException;
 use Slimfony\Core\Kernel;
 use Slimfony\Core\Log\JsonStdoutLogger;
 use Slimfony\Core\Log\RequestContext;
+use Slimfony\Core\Observability\ApcuStorage;
+use Slimfony\Core\Observability\MetricsController;
+use Slimfony\Core\Observability\MetricsRegistry;
 
 /** The composition root of the outbox relay, a command line process that uses the same core kernel as the api. */
 final class RelayKernelFactory
@@ -36,6 +40,21 @@ final class RelayKernelFactory
         $nats = new Client(new Configuration(host: $this->env->string('NATS_HOST'), port: $this->env->int('NATS_PORT', 4222), timeout: 2.0));
         $relay = new OutboxRelay($retry, new NatsMessagePublisher($nats, 'IMPORTS', ['imports.>']));
 
+        // the metrics live in this process's APCu (start it with -d apc.enable_cli=1) and are served on a port for Prometheus
+        if (!\function_exists('apcu_enabled') || !apcu_enabled()) {
+            throw new ConfigurationException('The relay keeps its metrics in APCu: start PHP with -d apc.enable_cli=1.');
+        }
+        $metrics = new MetricsRegistry(new ApcuStorage());
+        $endpoint = new MetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
+        $worker = new RelayWorker(
+            $relay,
+            $endpoint,
+            $logger,
+            $metrics->counter('outbox_published_total', 'Outbox messages published to the broker.'),
+            $metrics->counter('outbox_failures_total', 'Relay turns that failed (broker or database).'),
+            $metrics->gauge('outbox_pending', 'Outbox messages waiting to be published.'),
+        );
+
         return new Kernel(
             $this->projectDir . '/config/relay/services.php',
             $this->projectDir . '/config/relay/routes.php',
@@ -47,7 +66,7 @@ final class RelayKernelFactory
                 RequestContext::class => $context,
                 Connection::class => $connection,
                 ConnectionLifecycle::class => $lifecycle,
-                OutboxRelay::class => $relay,
+                RelayWorker::class => $worker,
             ],
         );
     }

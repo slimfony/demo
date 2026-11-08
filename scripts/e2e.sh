@@ -47,5 +47,13 @@ done
 [ "$pending" = 0 ] || fail "the relay did not publish the outbox"
 docker compose exec -T nats wget -qO- 'http://127.0.0.1:8222/jsz?streams=true' | grep -Eq '"messages": *[1-9]' || fail "the NATS stream holds no messages"
 
+# the relay's own metrics reach Prometheus (scraped from the relay's port with the metrics token)
+for _ in $(seq 1 20); do
+  sent=$(docker compose exec -T prometheus wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=sum(outbox_published_total)' | sed -n 's/.*"value":\[[0-9.]*,"\([0-9.]*\)"\].*/\1/p')
+  [ -n "$sent" ] && [ "${sent%.*}" -ge 1 ] && break
+  sleep 1
+done
+[ -n "$sent" ] && [ "${sent%.*}" -ge 1 ] || fail "Prometheus does not see the relay's metrics"
+
 echo "e2e ok"
 docker compose down -v

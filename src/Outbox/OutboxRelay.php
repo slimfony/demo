@@ -57,4 +57,12 @@ final class OutboxRelay
             return \count($ids);
         });
     }
+
+    /** How many messages wait to be published. */
+    public function pending(): int
+    {
+        $count = $this->retry->read(static fn(Connection $connection): mixed => $connection->fetchOne('SELECT count(*) FROM outbox WHERE published_at IS NULL'));
+
+        return \is_int($count) ? $count : throw new \UnexpectedValueException('The outbox count is not a number.');
+    }
 }
