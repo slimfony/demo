@@ -4,7 +4,9 @@
 declare(strict_types=1);
 
 use Demo\Camt\StatementGenerator;
+use Demo\Generator\LoadRunner;
 use Demo\Generator\RunGenerator;
+use Demo\Imports\LoadRunRepository;
 use Demo\Imports\RunRepository;
 use Demo\Infrastructure\Idp\HttpTokenSource;
 use Slimfony\Core\Config\Env;
@@ -38,10 +40,12 @@ $generator = new RunGenerator(
     $logger,
 );
 
+$loadRunner = new LoadRunner($connection, new LoadRunRepository(), rtrim($env->string('API_URL'), '/'), $logger);
+
 $logger->info('Run generator started');
 while (true) {
     try {
-        if (!$generator->serveOne()) {
+        if (!$generator->serveOne() && !$loadRunner->serveOne()) {
             usleep(300_000);
         }
     } catch (Throwable $e) {

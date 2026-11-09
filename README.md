@@ -74,7 +74,7 @@ The statements come from a generator that makes valid files and, on request, fil
 | `postgres` + `pgbouncer` | database, reached through a transaction pooler |
 | `idp` | small identity provider: publishes its keys (JWKS) over HTTPS and hands out demo tokens |
 | `relay` | command line process that publishes the outbox rows to NATS JetStream (several can run side by side), and announces batches that were forgotten again (the sweeper) |
-| `generator` | command line process that uploads the ZIPs of the page's import runs to the API (the page asks for a run, this process serves it) |
+| `generator` | command line process that serves the runs the page asks for: it uploads the ZIPs of an import and sends the requests of "Try it" (the page follows the run, so a reload does not stop it) |
 | `importer` (4 replicas) | take batches from NATS and book the statements; `docker compose up --scale importer=8` runs more |
 | `nats` | JetStream message broker |
 | `prometheus` + `grafana` | metrics, scraped every 2 seconds, with a provisioned dashboard |

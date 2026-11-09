@@ -4,6 +4,8 @@ import { animateNumber, formatBytes, formatInteger, formatMicroseconds } from '.
 const WINDOW = 60; // samples kept: two minutes at one sample every two seconds
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const FONT = '12px -apple-system, Inter, sans-serif';
+const MIN_TOP = 4; // an empty chart still has a scale: 0 1 2 3 4, and it grows with the data
+const WHOLE_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000]; // every value on these charts is a whole number
 
 function chart(element, colorVar, formatValue) {
   const color = () => css(colorVar);
@@ -19,11 +21,11 @@ function chart(element, colorVar, formatValue) {
     scales: {
       // a window that follows the clock, so an empty chart still shows the last two minutes (not years)
       x: { time: true, range: () => { const now = Math.floor(Date.now() / 1000); return [now - 118, now]; } },
-      y: { range: (self, min, max) => [0, Math.max(max * 1.15, 1)] },
+      y: { range: (self, min, max) => [0, Math.max(max * 1.15, MIN_TOP)] },
     },
     axes: [
       { stroke: muted, grid: { show: false }, ticks: { show: false }, font: FONT },
-      { stroke: muted, grid: { stroke: grid, width: 1 }, ticks: { show: false }, size: 56, font: FONT, values: (self, ticks) => ticks.map(formatValue) },
+      { stroke: muted, grid: { stroke: grid, width: 1 }, ticks: { show: false }, size: 56, font: FONT, space: 28, incrs: WHOLE_STEPS, values: (self, ticks) => ticks.map(formatValue) },
     ],
     series: [
       {},
@@ -47,14 +49,18 @@ function chart(element, colorVar, formatValue) {
   };
 }
 
+// The top of a scale: a multiple of 4 above the data, so that four equal parts are whole numbers (the two sides of a two-scale chart line up).
+const quarters = (max) => Math.max(MIN_TOP, Math.ceil((max * 1.1) / 4) * 4);
+
 // Two series with their own scales (left: memory in MB, right: busy workers), on one time axis.
 function dualChart(element) {
   const muted = () => css('--text-2');
   const grid = () => css('--line');
   const data = [[], [], []];
   const axis = (scale, side) => ({
-    scale, side, stroke: muted, grid: { show: false }, ticks: { show: false }, size: 48, font: FONT,
+    scale, side, stroke: muted, grid: { show: false }, ticks: { show: false }, size: 48, font: FONT, space: 28, incrs: WHOLE_STEPS,
     values: (self, ticks) => ticks.map((v) => formatInteger(v)),
+    splits: (self, axisIndex, min, max) => [0, 0.25, 0.5, 0.75, 1].map((part) => min + (max - min) * part), // four equal parts on both sides: the ticks line up with the grid
   });
   const plot = new window.uPlot({
     width: element.clientWidth,
@@ -64,8 +70,8 @@ function dualChart(element) {
     select: { show: false },
     scales: {
       x: { time: true, range: () => { const now = Math.floor(Date.now() / 1000); return [now - 118, now]; } },
-      mb: { range: (self, min, max) => [0, Math.max(max * 1.15, 1)] },
-      workers: { range: (self, min, max) => [0, Math.max(max * 1.15, 1)] },
+      mb: { range: (self, min, max) => [0, quarters(max)] },
+      workers: { range: (self, min, max) => [0, quarters(max)] },
     },
     axes: [
       { stroke: muted, grid: { show: false }, ticks: { show: false }, font: FONT },

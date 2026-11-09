@@ -64,3 +64,19 @@ CREATE TABLE import_run_items (
     http_status integer NOT NULL,
     PRIMARY KEY (run_id, idx)
 );
+
+-- A run of the page's "Try it": requests to one endpoint, sent by the generator service (so a reload of the page does not stop it).
+CREATE TABLE load_runs (
+    id          uuid        PRIMARY KEY,
+    requests    integer     NOT NULL CHECK (requests BETWEEN 1 AND 200000),
+    endpoint    text        NOT NULL CHECK (endpoint IN ('/healthz', '/api/runtime')),
+    status      text        NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'running', 'done')),
+    sent        integer     NOT NULL DEFAULT 0,
+    errors      integer     NOT NULL DEFAULT 0,
+    seconds     numeric,
+    p50_ms      numeric,
+    p95_ms      numeric,
+    p99_ms      numeric,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    finished_at timestamptz
+);

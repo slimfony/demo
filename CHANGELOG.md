@@ -5,14 +5,15 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ## [Unreleased]
 
 ### Added
-- **A run of the page's import lives on the server.** The `generator` service generates and uploads the ZIPs (`POST /api/import/runs` asks for a run, `GET /api/import/runs/latest` follows it), so a reload of the page no longer stops or loses a run: the page joins the run again. One run at a time (409 while one is going). New tables `import_runs` and `import_run_items` in `docker/postgres/20-schema.sql`.
+- **A run of the page's import lives on the server.** The `generator` service generates and uploads the ZIPs, and also sends the requests of "Try it" (`POST /api/load/runs`, `GET /api/load/runs/latest`; 5,000, 50,000 or 200,000 requests to `/healthz` or `/api/runtime`) (import: `POST /api/import/runs` asks for a run, `GET /api/import/runs/latest` follows it), so a reload of the page no longer stops or loses a run: the page joins the run again. One run at a time (409 while one is going). New tables `import_runs`, `import_run_items` and `load_runs` in `docker/postgres/20-schema.sql`.
+- The charts of the page show whole-number ticks (an empty chart is 0 to 4 and grows with the data), and the two scales of the memory chart line up with the grid.
 - The page's Live section has six charts: the garbage collector (cycles freed per second) and the memory of the web server with the busy PHP workers. New numbers: memory, busy workers, garbage collector runs.
 - `DEFER_GC=true` (compose: `BENCH_DEFER_GC`) runs the PHP cycle collector between requests; the collector's runs are counted (`php_gc_runs_total`, `php_gc_collected_total`).
 - The page shows the API's p99 instead of p95: the slowest one in a hundred is where a garbage collector pause shows.
 - Prometheus reads the PHP thread numbers of FrankenPHP (`frankenphp_busy_workers`) from an internal port (9101).
 
 ### Upgrading
-- **A database volume from an earlier version does not have the two new tables** (PostgreSQL runs its init scripts only on an empty volume). Start from a clean volume: `docker compose down -v`, then `docker compose up -d --build --wait`. The demo's data is disposable.
+- **A database volume from an earlier version does not have the three new tables** (PostgreSQL runs its init scripts only on an empty volume). Start from a clean volume: `docker compose down -v`, then `docker compose up -d --build --wait`. The demo's data is disposable.
 
 ## [0.4.0] - 2026-11-09
 

@@ -32,6 +32,20 @@ test('a reload during an import does not lose it: the page follows the run again
   await expect(page.locator('#run-tiles .tile.queued, #run-tiles .tile.running, #run-tiles .tile.refused')).toHaveCount(0);
 });
 
+test('"Try it" is run by the server: a reload joins the run and the result shows', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#push-form select[name="total"]').selectOption('200000');
+  await page.locator('#push-start').click();
+  await expect(page.locator('#push-start')).toBeDisabled();
+
+  await page.reload();
+  await expect(page.locator('#push-start')).toBeDisabled(); // the page found the run that is still going
+
+  await expect(page.locator('#push-results')).toBeVisible({ timeout: 90_000 });
+  expect(await number(page.locator('#res-done'))).toBe(200000);
+  await expect(page.locator('#res-errors')).toHaveText('0');
+  await expect(page.locator('#push-start')).toBeEnabled();
+});
 test('an import runs from the first upload to the result card', async ({ page }) => {
   await page.goto('/');
   await page.locator('#run-form select[name="zips"]').selectOption('50');

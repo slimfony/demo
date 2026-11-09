@@ -165,18 +165,18 @@
     </section>
     <section class="wrap block" id="push" aria-labelledby="push-title">
       <h2 id="push-title">Try it</h2>
-      <p class="sub">Your browser sends requests as fast as it can and the charts below react. A browser opens about six connections, so this is a taste. The real load test uses k6.</p>
+      <p class="sub">The server sends the requests as fast as it can, over six connections like a browser, and the charts below react. A reload of the page does not stop it. This is a taste; the real load test uses k6.</p>
 
       <form id="push-form" class="form">
         <label>Requests
           <select name="total">
-            <option value="2000">2,000</option>
-            <option value="5000" selected>5,000</option>
-            <option value="20000">20,000</option>
+            <option value="5000">5,000</option>
+            <option value="50000" selected>50,000</option>
+            <option value="200000">200,000</option>
           </select>
         </label>
         <label>Endpoint
-          <select name="url">
+          <select name="endpoint">
             <option value="/healthz" selected>/healthz</option>
             <option value="/api/runtime">/api/runtime</option>
           </select>
