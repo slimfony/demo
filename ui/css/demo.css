@@ -44,6 +44,8 @@ button.small.primary { color: #fff; background: var(--accent); }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; padding: 0; margin: 14px 0 0; font-size: 13px; color: var(--text-2); }
 .legend li { display: flex; align-items: center; gap: 6px; }
+.legend .legend-title { flex-basis: 100%; margin-top: 4px; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--text-3, var(--text-2)); }
+.legend .legend-title:first-child { margin-top: 0; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--tile-queued); background-position: center; background-repeat: no-repeat; background-size: 70%; }
 .swatch.running { background-color: var(--accent); }
 .swatch.done { background-color: var(--ok); }

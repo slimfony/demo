@@ -105,13 +105,15 @@
 
       <div id="run-tiles" class="tiles" role="img" aria-label="One tile for every ZIP file, coloured by what happened to it"></div>
       <ul class="legend" aria-label="What the tiles mean">
+        <li class="legend-title">Colour: what happened to the ZIP</li>
         <li><i class="swatch queued"></i>waiting</li>
         <li><i class="swatch running"></i>importing</li>
         <li><i class="swatch done"></i>booked</li>
         <li><i class="swatch problems"></i>booked, some rejected</li>
         <li><i class="swatch failed"></i>rolled back</li>
         <li><i class="swatch refused"></i>refused</li>
-        <li><i class="swatch shield"></i>uploaded with a token</li>
+        <li class="legend-title">Shield: how it was uploaded</li>
+        <li><i class="swatch shield"></i>with an access token</li>
       </ul>
 
       <div class="numbers run-numbers">
