@@ -18,6 +18,11 @@ final class StatsController
     private const string REQUESTS_PER_SECOND = 'sum(rate(http_requests_total[10s]))';
     private const string P95_SECONDS = 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[10s])))';
     private const string REQUESTS_TOTAL = 'sum(http_requests_total)';
+    private const string GC_RUNS_TOTAL = 'sum(php_gc_runs_total) or vector(0)'; // a counter has no series before its first increment
+    private const string GC_CYCLES_PER_SECOND = 'sum(rate(php_gc_collected_total[10s])) or vector(0)';
+    private const string MEMORY_BYTES = 'max(php_memory_bytes)';
+    private const string BUSY_WORKERS = 'sum(frankenphp_busy_workers)';
+    private const string TOTAL_WORKERS = 'sum(frankenphp_total_workers)';
     private const string CACHE_KEY = 'demo.stats';
 
     public function __construct(private readonly PrometheusQuery $prometheus) {}
@@ -34,6 +39,11 @@ final class StatsController
             'requests_per_second' => $this->prometheus->value(self::REQUESTS_PER_SECOND),
             'p95_microseconds' => null === $p95 ? null : round($p95 * 1_000_000, 1),
             'requests_total' => $this->prometheus->value(self::REQUESTS_TOTAL),
+            'gc_runs_total' => $this->prometheus->value(self::GC_RUNS_TOTAL),
+            'gc_cycles_per_second' => $this->prometheus->value(self::GC_CYCLES_PER_SECOND),
+            'memory_bytes' => $this->prometheus->value(self::MEMORY_BYTES),
+            'busy_workers' => $this->prometheus->value(self::BUSY_WORKERS),
+            'total_workers' => $this->prometheus->value(self::TOTAL_WORKERS),
             'at' => time(),
         ];
         apcu_store(self::CACHE_KEY, $stats, 1);

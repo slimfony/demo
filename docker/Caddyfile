@@ -1,5 +1,7 @@
 {
 	admin off
+	# the server's own numbers (PHP threads: total, busy), read by Prometheus on a port that is not published
+	metrics
 	http_port 8080
 	https_port 8443
 	auto_https disable_redirects
@@ -106,4 +108,9 @@ localhost:8443 {
 		}
 	}
 	import app
+}
+
+# Prometheus reads the PHP thread numbers here; the port is open inside the compose network only
+:9101 {
+	metrics
 }

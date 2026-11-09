@@ -238,6 +238,11 @@
         <div><span class="num" id="kpi-waiting">–</span><span class="cap">ZIPs waiting or being imported</span></div>
         <div><span class="num" id="kpi-retries">–</span><span class="cap">deadlocks run again, in total</span></div>
       </div>
+      <div class="numbers">
+        <div><span class="num" id="kpi-memory">–</span><span class="cap">memory of the web server</span></div>
+        <div><span class="num" id="kpi-busy">–</span><span class="cap">PHP workers busy</span></div>
+        <div><span class="num" id="kpi-gc">–</span><span class="cap">garbage collector runs, in total</span></div>
+      </div>
 
       <div class="charts">
         <figure><div id="chart-rps" class="chart" role="img" aria-label="Requests per second, last two minutes"></div><figcaption>Requests per second</figcaption></figure>
@@ -246,6 +251,10 @@
       <div class="charts">
         <figure><div id="chart-sps" class="chart" role="img" aria-label="Statements booked per second, last two minutes"></div><figcaption>Statements booked per second</figcaption></figure>
         <figure><div id="chart-import-p95" class="chart" role="img" aria-label="Import time of a ZIP, p95, last two minutes"></div><figcaption>Time to import a ZIP, p95 in milliseconds</figcaption></figure>
+      </div>
+      <div class="charts">
+        <figure><div id="chart-gc" class="chart" role="img" aria-label="Cycles freed by the garbage collector per second, last two minutes"></div><figcaption>Garbage collector: cycles freed per second</figcaption></figure>
+        <figure><div id="chart-workers" class="chart" role="img" aria-label="Memory of the web server and busy PHP workers, last two minutes"></div><figcaption>Memory of the web server in MB (blue) and busy PHP workers (orange)</figcaption></figure>
       </div>
     </section>
 

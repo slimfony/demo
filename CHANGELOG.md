@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Added
+- The page's Live section has six charts: the garbage collector (cycles freed per second) and the memory of the web server with the busy PHP workers. New numbers: memory, busy workers, garbage collector runs.
+- `DEFER_GC=true` (compose: `BENCH_DEFER_GC`) runs the PHP cycle collector between requests; the collector's runs are counted (`php_gc_runs_total`, `php_gc_collected_total`).
+- Prometheus reads the PHP thread numbers of FrankenPHP (`frankenphp_busy_workers`) from an internal port (9101).
+
 ## [0.4.0] - 2026-11-09
 
 ### Added
