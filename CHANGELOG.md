@@ -4,12 +4,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-09
+
 ### Added
 - `import_stage_seconds{stage}`: where the time of an imported batch goes (claim, unzip, parse, write, finish, events).
 
 ### Changed
 - **Importers pull 5 messages per request** (`IMPORT_PULL_BATCH`). One message per pull cost about 41 ms of waiting per ZIP; with one importer 400 ZIPs now take 15.8 s instead of 31.7 s. With eight importers the database write is the limit and the gain is small (13.9 s to 13.0 s for 1000 ZIPs).
 - One database round trip less per statement: the lock query returns the account's currency.
+- The page's legend separates the tile colours (what happened to the ZIP) from the shield (how it was uploaded). New picture and recording.
+- The `TokenSource` interface is gone: `HttpTokenSource` is used directly.
 
 ## [0.3.1] - 2026-11-09
 
