@@ -16,6 +16,7 @@ use Demo\Imports\LockOrder;
 use Demo\Imports\RejectedUpload;
 use Doctrine\DBAL\Connection;
 use Slimfony\Core\Database\Retry;
+use Slimfony\Core\Observability\Histogram;
 
 /**
  * Imports one uploaded ZIP.
@@ -38,14 +39,32 @@ final class BatchImporter
         private readonly StatementWriter $writer,
         private readonly Retry $retry,
         private readonly Chaos $chaos = new NoChaos(),
+        private readonly ?Histogram $stages = null, // import_stage_seconds{stage}: where the time of a batch goes
     ) {}
+
+    /**
+     * @template T
+     *
+     * @param \Closure(): T $work
+     *
+     * @return T
+     */
+    private function timed(string $stage, \Closure $work): mixed
+    {
+        $start = hrtime(true);
+        try {
+            return $work();
+        } finally {
+            $this->stages?->observe((hrtime(true) - $start) / 1e9, [$stage]);
+        }
+    }
 
     /**
      * @return ImportResult|null null when the batch was not waiting for this worker (a repeated delivery)
      */
     public function import(string $batchId, string $worker): ?ImportResult
     {
-        $batch = $this->batches->claim($batchId, $worker);
+        $batch = $this->timed('claim', fn(): ?array => $this->batches->claim($batchId, $worker));
         if (null === $batch) {
             return null;
         }
@@ -79,7 +98,7 @@ final class BatchImporter
         $source = ImportSource::from($batch['source']);
 
         try {
-            $files = $this->archives->read($batch['bytes'], $source->limits());
+            $files = $this->timed('unzip', fn(): array => $this->archives->read($batch['bytes'], $source->limits()));
         } catch (RejectedUpload $e) {
             $this->batches->recordError($batchId, new StatementRejected($e->reason, '*', $e->getMessage()));
             $this->batches->finish($batchId, ImportResult::FAILED, 0);
@@ -88,28 +107,34 @@ final class BatchImporter
         }
 
         // read and check everything that needs no database first
-        $statements = [];
-        $errors = [];
-        foreach ($files as $name => $xml) {
-            try {
-                $statement = $this->parser->parse($xml, $name);
-                $this->rules->check($statement);
-                $statements[] = $statement;
-            } catch (StatementRejected $e) {
-                $errors[] = $e;
+        [$statements, $errors] = $this->timed('parse', function () use ($files): array {
+            $statements = [];
+            $errors = [];
+            foreach ($files as $name => $xml) {
+                try {
+                    $statement = $this->parser->parse($xml, $name);
+                    $this->rules->check($statement);
+                    $statements[] = $statement;
+                } catch (StatementRejected $e) {
+                    $errors[] = $e;
+                }
             }
-        }
 
-        [$ok, $entries, $errors, $rolledBack] = ImportMode::Strict === $mode
+            return [$statements, $errors];
+        });
+
+        [$ok, $entries, $errors, $rolledBack] = $this->timed('write', fn(): array => ImportMode::Strict === $mode
             ? $this->strict($batchId, $statements, $errors)
-            : $this->partial($batchId, $statements, $errors, $order);
+            : $this->partial($batchId, $statements, $errors, $order));
 
+        $finishStart = hrtime(true);
         foreach ($errors as $error) {
             $this->batches->recordError($batchId, $error); // outside every transaction: the rows survive the rollbacks above
         }
         $failed = \count(array_filter($errors, static fn(StatementRejected $e): bool => StatementRejected::ROLLED_BACK !== $e->reason));
         $status = ImportMode::Strict === $mode && $failed > 0 ? ImportResult::FAILED : ImportResult::DONE;
         $this->batches->finish($batchId, $status, $failed);
+        $this->stages?->observe((hrtime(true) - $finishStart) / 1e9, ['finish']);
 
         $reasons = array_count_values(array_map(static fn(StatementRejected $error): string => $error->reason, $errors));
 

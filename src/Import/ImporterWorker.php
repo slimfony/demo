@@ -32,7 +32,16 @@ final class ImporterWorker
         private readonly Counter $failures,
         private readonly Counter $deadLettered,
         private readonly Histogram $duration,
+        private readonly Histogram $stages, // the same import_stage_seconds as the importer's, for the stage 'events'
     ) {}
+
+    /** @param array<string, bool|float|int|string|null> $data */
+    private function publish(string $type, array $data): void
+    {
+        $start = hrtime(true);
+        $this->events->publish($type, $data);
+        $this->stages->observe((hrtime(true) - $start) / 1e9, ['events']);
+    }
 
     public function tick(): bool
     {
@@ -61,7 +70,7 @@ final class ImporterWorker
             return;
         }
 
-        $this->events->publish('batch', ['id' => $batchId, 'state' => 'running', 'worker' => $this->worker]);
+        $this->publish('batch', ['id' => $batchId, 'state' => 'running', 'worker' => $this->worker]);
         try {
             $result = $this->importer->import($batchId, $this->worker);
         } catch (\Throwable $e) {
@@ -73,7 +82,7 @@ final class ImporterWorker
             $this->importer->giveUp($batchId, $delivered, $e);
             $this->deadLettered->inc();
             $this->logger->error('A batch was given up after the last delivery', ['batch_id' => $batchId, 'worker' => $this->worker, 'attempt' => $delivered, 'exception' => $e]);
-            $this->events->publish('batch', ['id' => $batchId, 'state' => 'failed', 'worker' => $this->worker, 'ok' => 0, 'failed' => 0, 'rolled_back' => 0, 'ms' => 0]);
+            $this->publish('batch', ['id' => $batchId, 'state' => 'failed', 'worker' => $this->worker, 'ok' => 0, 'failed' => 0, 'rolled_back' => 0, 'ms' => 0]);
 
             return;
         }
@@ -96,7 +105,7 @@ final class ImporterWorker
             'batch_id' => $batchId, 'worker' => $this->worker, 'mode' => $result->mode, 'status' => $result->status,
             'booked' => $result->statementsOk, 'rejected' => $result->statementsFailed, 'rolled_back' => $result->rolledBack,
         ]);
-        $this->events->publish('batch', [
+        $this->publish('batch', [
             'id' => $batchId, 'state' => $result->status, 'worker' => $this->worker, 'mode' => $result->mode, 'source' => $result->source,
             'ok' => $result->statementsOk, 'failed' => $result->statementsFailed, 'rolled_back' => $result->rolledBack, 'ms' => (int) round($result->seconds * 1000),
         ]);

@@ -20,8 +20,10 @@ use Demo\Imports\ImportMode;
 use Demo\Imports\ImportSource;
 use Demo\Imports\LockOrder;
 use Demo\Imports\RejectedUpload;
+use Demo\Tests\Support\InMemoryStorage;
 use Demo\Tests\Support\PostgresTestCase;
 use Slimfony\Core\Database\Retry;
+use Slimfony\Core\Observability\MetricsRegistry;
 
 /** The import against a real PostgreSQL: what is booked, what is rolled back, what is recorded. */
 final class BatchImporterTest extends PostgresTestCase
@@ -216,5 +218,24 @@ final class BatchImporterTest extends PostgresTestCase
         self::assertNotNull($appearance);
         self::assertSame([$sorted->statementsOk, $sorted->entries], [$appearance->statementsOk, $appearance->entries]);
         self::assertSame($after, [$this->rows('statements'), $this->rows('entries'), $this->balanceOf(1), $this->connection->fetchOne('SELECT sum(entries_total) FROM account_stats')], 'the same statements, the same balances, the same statistics');
+    }
+    public function testEveryStageOfAnImportIsTimed(): void
+    {
+        $registry = new MetricsRegistry(new InMemoryStorage());
+        $importer = new BatchImporter(
+            new ImportRepository($this->connection),
+            new ArchiveReader(),
+            new CamtParser(__DIR__ . '/../../schema/camt.053.001.02.xsd'),
+            new StatementRules(),
+            new StatementWriter(),
+            new Retry($this->connection),
+            stages: $registry->histogram('import_stage_seconds', 'Stage time.', ['stage']),
+        );
+
+        $importer->import($this->queue($this->generator->files(1, 3)), 'w1');
+
+        foreach (['claim', 'unzip', 'parse', 'write', 'finish'] as $stage) {
+            self::assertStringContainsString('import_stage_seconds_count{stage="' . $stage . '"} 1', $registry->render());
+        }
     }
 }

@@ -57,6 +57,7 @@ final class ImporterKernelFactory
         $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: $this->env->bool('DB_TRANSACTION_POOLING', true), applicationName: 'demo-importer');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger, maxAttempts: 8, retries: $metrics->counter('db_retries_total', 'Database operations that were retried (deadlocks, lost connections).', ['reason']));
+        $stages = $metrics->histogram('import_stage_seconds', 'Time of one stage of importing a batch (claim, unzip, parse, write, finish; events is the notifications to the page).', ['stage']);
         $ackWait = $this->env->int('IMPORT_ACK_WAIT_SECONDS', 60); // how long the broker waits for an acknowledgement before it delivers a message again
         $importer = new BatchImporter(
             new ImportRepository($connection, $ackWait + 30), // a batch still `running` after this long was abandoned
@@ -66,6 +67,7 @@ final class ImporterKernelFactory
             new StatementWriter(),
             $retry,
             $this->env->bool('CHAOS_ENABLED') ? new KillSwitchChaos(new KillTokens($connection), $logger) : new NoChaos(),
+            $stages,
         );
 
         $nats = new Client(new Configuration(host: $this->env->string('NATS_HOST'), port: $this->env->int('NATS_PORT', 4222), timeout: 2.0));
@@ -93,6 +95,7 @@ final class ImporterKernelFactory
             $metrics->counter('import_worker_failures_total', 'Turns that failed (broker or database).'),
             $metrics->counter('import_dead_lettered_total', 'Batches given up after the last delivery the broker allows.'),
             $metrics->histogram('import_batch_seconds', 'Time to import one batch.'),
+            $stages,
         );
 
         return new Kernel(
