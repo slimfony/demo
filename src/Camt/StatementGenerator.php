@@ -39,22 +39,22 @@ final class StatementGenerator
      *
      * @return array<string, string> file name => XML
      */
-    public function files(int $seed, int $statements = 10, float $faultRate = 0.0, ?string $fault = null): array
+    public function files(int $seed, int $statements = 10, float $faultRate = 0.0, ?string $fault = null, int $accounts = self::ACCOUNTS): array
     {
         $random = new Randomizer(new Mt19937($seed));
         $files = [];
         for ($i = 1; $i <= $statements; ++$i) {
             $wrong = $faultRate > 0 && $random->getInt(0, 9999) < (int) ($faultRate * 10_000);
             $kind = $wrong ? ($fault ?? self::FAULTS[$random->getInt(0, \count(self::FAULTS) - 1)]) : null;
-            $files[\sprintf('statement-%02d.xml', $i)] = $this->statement($random, \sprintf('S%d-%02d', $seed, $i), $kind);
+            $files[\sprintf('statement-%02d.xml', $i)] = $this->statement($random, \sprintf('S%d-%02d', $seed, $i), $kind, max(1, min(self::ACCOUNTS, $accounts)));
         }
 
         return $files;
     }
 
-    private function statement(Randomizer $random, string $id, ?string $fault): string
+    private function statement(Randomizer $random, string $id, ?string $fault, int $accounts): string
     {
-        $account = $random->getInt(1, self::ACCOUNTS);
+        $account = $random->getInt(1, $accounts);
         $iban = StatementRejected::UNKNOWN_ACCOUNT === $fault ? self::iban(900 + $account) : self::iban($account);
         $currency = StatementRejected::CURRENCY_MISMATCH === $fault ? 'USD' : 'EUR';
         $opening = $random->getInt(50_000, 500_000);
@@ -66,7 +66,7 @@ final class StatementGenerator
             $credit = 0 === $random->getInt(0, 1);
             $net += $credit ? $cents : -$cents;
             $day = StatementRejected::ENTRY_OUTSIDE_PERIOD === $fault && 1 === $n ? '2026-11-15' : \sprintf('2026-10-%02d', $random->getInt(1, 28));
-            $other = self::iban($random->getInt(1, self::ACCOUNTS));
+            $other = self::iban($random->getInt(1, $accounts));
             $entries[] = [StatementRejected::DUPLICATE_ENTRY === $fault && 2 === $n ? 'E1' : 'E' . $n, $cents, $credit, $day, $other];
         }
         $closing = $opening + $net + (StatementRejected::BALANCE_MISMATCH === $fault ? 100 : 0);

@@ -880,6 +880,65 @@
             }
         },
         {
+            "id": 17,
+            "type": "timeseries",
+            "title": "No batch is forgotten: announced again by the sweeper, given up by the importers",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 44
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(outbox_swept_total[10s]))",
+                    "legendFormat": "announced again",
+                    "refId": "A",
+                    "interval": "2s"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate(import_dead_lettered_total[10s]))",
+                    "legendFormat": "given up (failed on record)",
+                    "refId": "B",
+                    "interval": "2s"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 12,
+                        "showPoints": "never",
+                        "spanNulls": true
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
             "id": 12,
             "type": "timeseries",
             "title": "Uploads: accepted and refused by source and reason",

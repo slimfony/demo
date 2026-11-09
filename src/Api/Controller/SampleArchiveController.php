@@ -33,7 +33,7 @@ final class SampleArchiveController
             return new ProblemResponse(400, \is_string($id) ? $id : null, 'Unknown fault.');
         }
 
-        $zip = $this->generator->zip($this->generator->files($seed, $files, $rate, '' === $fault ? null : $fault));
+        $zip = $this->generator->zip($this->generator->files($seed, $files, $rate, '' === $fault ? null : $fault, $request->query->getInt('accounts', StatementGenerator::ACCOUNTS)));
 
         return new Response($zip, 200, ['Content-Type' => 'application/zip', 'Content-Disposition' => 'attachment; filename="statements.zip"', 'Cache-Control' => 'no-store']);
     }

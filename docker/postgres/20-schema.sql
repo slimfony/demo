@@ -15,12 +15,20 @@ CREATE TABLE batches (
     worker             text,
     started_at         timestamptz,
     finished_at        timestamptz,
+    reannounced_at     timestamptz, -- when the sweeper last announced this batch again
     statements_ok      integer NOT NULL DEFAULT 0,
     statements_failed  integer NOT NULL DEFAULT 0,
     statements_rolled_back integer NOT NULL DEFAULT 0,
     entries_booked     integer NOT NULL DEFAULT 0
 );
 CREATE INDEX batches_created_at ON batches (created_at);
+
+-- Chaos switches of the demo: a row is a request to break something (see Chaos\KillTokens).
+CREATE TABLE chaos (
+    id         bigserial   PRIMARY KEY,
+    action     text        NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
 
 -- Written in the same transaction as the batch; a relay publishes the rows to NATS.
 CREATE TABLE outbox (

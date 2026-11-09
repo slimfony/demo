@@ -41,6 +41,7 @@ Docker needs about 3 GB of memory for this stack.
 ## On the page
 
 - **Import.** Press *Start import*: the page generates up to 1,000 ZIPs of 10 statements each and uploads them to the API (19 in 20 with a token, the rest through the anonymous sandbox). One tile per ZIP shows where it is: waiting, importing, booked, booked with rejected statements, rolled back, refused. A shield marks the uploads that came with a verified token. Numbers, a result card and a live log of the services follow.
+- **Chaos.** While an import runs, kill an importer in the middle of a batch or cut the database connections. Every ZIP still ends up booked, or failed with the reason on record; none stays waiting. "Account contention: high" spreads the statements over six accounts, so the importers meet on the same rows and the deadlocks multiply.
 - **Tokens and keys.** Send a ZIP with a valid or a broken token and see why it is refused. Rotate the identity provider's signing key and see the API pick up the new one.
 - **Send requests.** The browser sends a few thousand requests to the API as fast as it can.
 - **Live** (requests per second and latency from Prometheus), **Batches** (the latest ZIPs), **Present** (a big-screen view) and a short guided tour.
@@ -66,7 +67,7 @@ The statements come from a generator that makes valid files and, on request, fil
 | `web` | FrankenPHP with 4 PHP workers, serves the API and the static page |
 | `postgres` + `pgbouncer` | database, reached through a transaction pooler |
 | `idp` | small identity provider: publishes its keys (JWKS) over HTTPS and hands out demo tokens |
-| `relay` | command line process that publishes the outbox rows to NATS JetStream (several can run side by side) |
+| `relay` | command line process that publishes the outbox rows to NATS JetStream (several can run side by side), and announces batches that were forgotten again (the sweeper) |
 | `importer` (4 replicas) | take batches from NATS and book the statements; `docker compose up --scale importer=8` runs more |
 | `nats` | JetStream message broker |
 | `prometheus` + `grafana` | metrics, scraped every 2 seconds, with a provisioned dashboard |
@@ -98,7 +99,8 @@ Every route needs a verified token unless it is marked public (deny by default);
 ```bash
 composer install
 composer ci          # tests, PHPStan (max), code style
-bash scripts/e2e.sh  # starts the stack and checks it
+bash scripts/e2e.sh  # starts the stack and checks it (including the chaos scenario)
+bash scripts/chaos.sh  # on a running stack: kill importers, cut connections, lose a message; nothing may be lost
 ```
 
 ## Status
@@ -109,10 +111,9 @@ The numbers the page shows come from a laptop running everything in Docker, with
 
 ## Roadmap
 
-1. **Chaos switches** on the page: cut a database connection, force a deadlock, and watch the imports still finish.
-2. **A real load test** with k6 (the API at a fixed arrival rate, the importers with 1, 2, 4 and 8 replicas, with and without PgBouncer), the results and the hardware published in the repository.
-3. **Kubernetes manifests** (probes, autoscaling, disruption budget, security context) and a **template repository** to start a service of your own from.
-4. **A browser test in CI** (Playwright) that runs an import and checks the page; the README gets a picture and a short recording of a real run.
+1. **A real load test** with k6 (the API at a fixed arrival rate, the importers with 1, 2, 4 and 8 replicas, with and without PgBouncer), the results and the hardware published in the repository.
+2. **Kubernetes manifests** (probes, autoscaling, disruption budget, security context) and a **template repository** to start a service of your own from.
+3. **A browser test in CI** (Playwright) that runs an import and checks the page; the README gets a picture and a short recording of a real run.
 
 ## License
 

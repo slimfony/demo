@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Demo\Api\Controller\BatchController;
 use Demo\Api\Controller\BatchListController;
+use Demo\Api\Controller\ChaosController;
 use Demo\Api\Controller\DemoRotateController;
 use Demo\Api\Controller\DemoTokenController;
 use Demo\Api\Controller\ImportRunController;
@@ -14,6 +15,8 @@ use Demo\Api\Controller\StatsController;
 use Demo\Api\Controller\StatusController;
 use Demo\Api\Controller\UploadController;
 use Demo\Camt\StatementGenerator;
+use Demo\Chaos\ChaosSwitch;
+use Demo\Chaos\KillTokens;
 use Demo\Imports\ArchiveInspector;
 use Demo\Imports\BatchRepository;
 use Demo\Imports\RateLimiter;
@@ -52,6 +55,7 @@ return static function (ContainerBuilder $c): void {
     $c->register(ConnectionLifecycle::class)->setSynthetic(true)->setPublic(true)->addTag(ResetPass::TAG);
     $c->register(Retry::class)->setSynthetic(true)->setPublic(true);
     $c->register(MetricsController::class)->setSynthetic(true)->setPublic(true);
+    $c->register(ChaosSwitch::class)->setSynthetic(true)->setPublic(true);
     $c->register(RateLimiter::class)->setSynthetic(true)->setPublic(true); // the limit comes from the environment
 
     // The middleware chain, outermost first.
@@ -98,6 +102,8 @@ return static function (ContainerBuilder $c): void {
     $c->register(TokenSource::class, HttpTokenSource::class)->setArguments(['%env(IDP_URL)%']);
     $c->register(DemoTokenController::class)->setAutowired(true);
     $c->register(DemoRotateController::class)->setAutowired(true);
+    $c->register(KillTokens::class)->setAutowired(true);
+    $c->register(ChaosController::class)->setAutowired(true);
     $c->register(ImportSummaryController::class)->setAutowired(true);
     $c->register(ImportRunController::class)->setAutowired(true);
     $c->register(BatchListController::class)->setAutowired(true);

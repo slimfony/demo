@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Demo\Tests\Api;
 
+use Demo\Chaos\ChaosSwitch;
 use Demo\Idp\InMemoryKeySet;
 use Demo\Idp\SigningKey;
 use Demo\Idp\TokenIssuer;
@@ -51,12 +52,13 @@ final class ApiKernelTest extends TestCase
 
     private TokenIssuer $idp;
 
-    private function kernel(): Kernel
+    private function kernel(bool $chaos = true): Kernel
     {
         $metrics = new MetricsRegistry(new InMemoryStorage());
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP, worker TEXT, started_at TEXT, finished_at TEXT, statements_ok INTEGER DEFAULT 0, statements_failed INTEGER DEFAULT 0, statements_rolled_back INTEGER DEFAULT 0, entries_booked INTEGER DEFAULT 0)');
         $connection->executeStatement('CREATE TABLE import_errors (reason TEXT)');
+        $connection->executeStatement('CREATE TABLE chaos (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT)');
         $connection->executeStatement('CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, payload TEXT, published_at TEXT)');
         $context = new RequestContext();
 
@@ -75,6 +77,7 @@ final class ApiKernelTest extends TestCase
                 ConnectionLifecycle::class => new ConnectionLifecycle($connection),
                 Retry::class => new Retry($connection),
                 Authenticator::class => $authenticator,
+                ChaosSwitch::class => new ChaosSwitch($chaos),
                 RateLimiter::class => new RateLimiter(new ArrayWindowCounter(), 3), // a small limit, to hit it
                 MetricsController::class => new MetricsController($metrics, self::TOKEN),
             ],
@@ -209,6 +212,20 @@ final class ApiKernelTest extends TestCase
         self::assertIsArray($body['batches']);
         self::assertCount(2, $body['batches']);
         self::assertStringNotContainsString('demo-client', (string) $response->getContent());
+    }
+
+    public function testTheChaosRoutesNeedTheScopeAndExistOnlyWhenTurnedOn(): void
+    {
+        $kernel = $this->kernel();
+
+        self::assertSame(401, $this->post($kernel, '/api/chaos/kill-importer', '')->getStatusCode());
+        self::assertSame(403, $this->post($kernel, '/api/chaos/kill-importer', '', TokenKind::MissingScope)->getStatusCode());
+
+        $killed = $this->post($kernel, '/api/chaos/kill-importer', '', TokenKind::Valid);
+        self::assertSame(200, $killed->getStatusCode());
+        self::assertStringContainsString('kill_importer', (string) $killed->getContent());
+
+        self::assertSame(404, $this->post($this->kernel(chaos: false), '/api/chaos/kill-importer', '', TokenKind::Valid)->getStatusCode());
     }
 
     public function testTheSandboxRouteIsOpenButLooksInsideTheFile(): void

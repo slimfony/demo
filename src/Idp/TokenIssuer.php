@@ -10,7 +10,7 @@ use Firebase\JWT\JWT;
 final class TokenIssuer
 {
     private const int LIFETIME_SECONDS = 300;
-    private const string SCOPE = 'import:write import:read';
+    private const string SCOPE = 'import:write import:read chaos:write';
 
     /** @var \Closure(): int */
     private readonly \Closure $now;

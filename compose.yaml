@@ -148,6 +148,7 @@ services:
       METRICS_TOKEN_FILE: /secrets/metrics_token
       MERCURE_URL: http://web:8080/.well-known/mercure
       MERCURE_KEY_FILE: /secrets/mercure_key
+      SWEEP_AFTER_SECONDS: "90" # must be longer than the importers' own timeouts (15 s + 30 s)
     volumes:
       - secrets:/secrets:ro
     read_only: true
@@ -184,6 +185,8 @@ services:
       METRICS_TOKEN_FILE: /secrets/metrics_token
       MERCURE_URL: http://web:8080/.well-known/mercure
       MERCURE_KEY_FILE: /secrets/mercure_key
+      CHAOS_ENABLED: "true" # an importer can be killed on request (demo only)
+      IMPORT_ACK_WAIT_SECONDS: "15" # short, so a killed importer's batch is taken again within a minute
     volumes:
       - secrets:/secrets:ro
     read_only: true
@@ -222,6 +225,7 @@ services:
       PROMETHEUS_URL: http://prometheus:9090
       NATS_MONITOR_URL: http://nats:8222
       IDP_URL: https://idp:8443
+      CHAOS_ENABLED: "true" # the chaos routes exist (demo only)
       SANDBOX_RATE_LIMIT: "1200" # anonymous uploads per minute and client
       JWKS_URI: https://idp:8443/.well-known/jwks.json
       JWT_ISSUER: https://idp:8443

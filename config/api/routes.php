@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Demo\Api\Controller\BatchController;
 use Demo\Api\Controller\BatchListController;
+use Demo\Api\Controller\ChaosController;
 use Demo\Api\Controller\DemoRotateController;
 use Demo\Api\Controller\DemoTokenController;
 use Demo\Api\Controller\ImportRunController;
@@ -37,6 +38,10 @@ return static function (RouteCollection $r): void {
     $r->add('api_import_summary', new Route('/api/import/summary', $public(ImportSummaryController::class), methods: ['GET']));
     $r->add('api_import_run', new Route('/api/import/run', $public(ImportRunController::class), methods: ['GET']));
     $r->add('api_batch_list', new Route('/api/batches', $public(BatchListController::class), methods: ['GET']));
+
+    // Break things on purpose (needs the chaos:write scope, and CHAOS_ENABLED in the environment).
+    $r->add('chaos_kill_importer', new Route('/api/chaos/kill-importer', ['_controller' => ChaosController::class, '_action' => 'kill_importer', '_scopes' => ['chaos:write']], methods: ['POST']));
+    $r->add('chaos_cut_connections', new Route('/api/chaos/cut-connections', ['_controller' => ChaosController::class, '_action' => 'cut_connections', '_scopes' => ['chaos:write']], methods: ['POST']));
 
     // Two ways in: with a token (the caller is known) and anonymously (sandbox with tighter limits).
     $r->add('import_upload', new Route('/api/imports', ['_controller' => UploadController::class, '_source' => 'jwt', '_scopes' => ['import:write']], methods: ['POST']));

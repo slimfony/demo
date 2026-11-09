@@ -1,4 +1,5 @@
 import { startBatches } from './batches.js';
+import { setupChaos } from './chaos.js';
 import { on, startEvents } from './events.js';
 import { formatInteger, formatMilliseconds } from './format.js';
 import { startLive } from './live.js';
@@ -67,6 +68,7 @@ setupMenus();
 // the log view is an extra: if a browser extension blocks its script, the rest of the page must still work
 import('./activity.js').then(({ setupLogView }) => on('log', setupLogView())).catch(() => {});
 setupRun();
+setupChaos();
 startEvents();
 startBatches();
 setupPresent();

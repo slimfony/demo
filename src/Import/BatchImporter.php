@@ -8,6 +8,8 @@ use Demo\Camt\CamtParser;
 use Demo\Camt\Statement;
 use Demo\Camt\StatementRejected;
 use Demo\Camt\StatementRules;
+use Demo\Chaos\Chaos;
+use Demo\Chaos\NoChaos;
 use Demo\Imports\ImportMode;
 use Demo\Imports\ImportSource;
 use Demo\Imports\RejectedUpload;
@@ -34,6 +36,7 @@ final class BatchImporter
         private readonly StatementRules $rules,
         private readonly StatementWriter $writer,
         private readonly Retry $retry,
+        private readonly Chaos $chaos = new NoChaos(),
     ) {}
 
     /**
@@ -45,6 +48,7 @@ final class BatchImporter
         if (null === $batch) {
             return null;
         }
+        $this->chaos->strike(); // normally nothing; the demo's chaos switch can kill this process right here
 
         try {
             return $this->run($batchId, $batch);
@@ -53,6 +57,14 @@ final class BatchImporter
 
             throw $e;
         }
+    }
+
+    /**
+     * Ends a batch that could not be imported after every delivery the broker allows: it becomes `failed`, with the reason on record.
+     */
+    public function giveUp(string $batchId, int $attempts, \Throwable $cause): void
+    {
+        $this->batches->giveUp($batchId, $attempts, new \ReflectionClass($cause)->getShortName());
     }
 
     /**

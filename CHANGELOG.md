@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Added
+- **No batch is forgotten:** a sweeper in the relay announces again every batch that has waited (or been `running`) for too long; an importer gives up a batch after the last delivery the broker allows, and the batch ends as `failed` with the reason `gave_up` on record.
+- **Chaos switches** (`CHAOS_ENABLED`, scope `chaos:write`): kill an importer in the middle of a batch, cut the database connections; "account contention: high" on the page. `scripts/chaos.sh` runs the scenario and checks that no ZIP is lost; it is part of `scripts/e2e.sh`.
+- The page follows an import through the database (once a second); events only make the tiles move at once.
+- Importer timeouts from the environment (`IMPORT_ACK_WAIT_SECONDS`), the relay's sweep delay (`SWEEP_AFTER_SECONDS`).
+
+### Fixed
+- A batch that failed after every retry stayed `running` for ever; it is given back, and an abandoned one is taken again.
+- Strict mode locks the accounts of a whole ZIP in a fixed order first, so ZIPs wait for each other instead of deadlocking.
+- Tiles stuck as "waiting" when the event stream lost events.
+
 ## [0.1.0] - 2026-11-08
 
 First release: a complete service on slimfony/core 0.3.0, started with one `docker compose up`.

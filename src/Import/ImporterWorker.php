@@ -30,6 +30,7 @@ final class ImporterWorker
         private readonly Counter $rejections,
         private readonly Counter $entries,
         private readonly Counter $failures,
+        private readonly Counter $deadLettered,
         private readonly Histogram $duration,
     ) {}
 
@@ -47,7 +48,10 @@ final class ImporterWorker
         return true;
     }
 
-    private function handle(Payload $payload): void
+    /** The broker delivers a message this many times at most (the consumer is set up with it); after the last failed delivery the batch is given up. */
+    public const int MAX_DELIVER = 5;
+
+    private function handle(Payload $payload, ?string $replyTo = null): void
     {
         $message = json_decode($payload->body, true);
         $batchId = \is_array($message) && \is_string($message['batch_id'] ?? null) ? $message['batch_id'] : null;
@@ -58,7 +62,21 @@ final class ImporterWorker
         }
 
         $this->events->publish('batch', ['id' => $batchId, 'state' => 'running', 'worker' => $this->worker]);
-        $result = $this->importer->import($batchId, $this->worker);
+        try {
+            $result = $this->importer->import($batchId, $this->worker);
+        } catch (\Throwable $e) {
+            $delivered = DeliveryCount::fromReplySubject($replyTo);
+            if ($delivered < self::MAX_DELIVER) {
+                throw $e; // not acknowledged: the broker delivers it again
+            }
+            // the last delivery failed too: the batch ends as failed, on record, and the message is acknowledged
+            $this->importer->giveUp($batchId, $delivered, $e);
+            $this->deadLettered->inc();
+            $this->logger->error('A batch was given up after the last delivery', ['batch_id' => $batchId, 'worker' => $this->worker, 'attempt' => $delivered, 'exception' => $e]);
+            $this->events->publish('batch', ['id' => $batchId, 'state' => 'failed', 'worker' => $this->worker, 'ok' => 0, 'failed' => 0, 'rolled_back' => 0, 'ms' => 0]);
+
+            return;
+        }
         if (null === $result) {
             $this->logger->info('Batch already taken, message acknowledged', ['batch_id' => $batchId, 'worker' => $this->worker]);
 

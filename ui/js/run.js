@@ -78,8 +78,8 @@ export function setupRun() {
     render(run);
   }
 
-  async function upload(index, mode, faults, token, seed) {
-    const sample = await (await fetch(`/api/sample.zip?files=10&seed=${seed}&fault_rate=${faults}`, { cache: 'no-store' })).blob();
+  async function upload(index, mode, faults, accounts, token, seed) {
+    const sample = await (await fetch(`/api/sample.zip?files=10&seed=${seed}&fault_rate=${faults}&accounts=${accounts}`, { cache: 'no-store' })).blob();
     const sandbox = index % SANDBOX_EVERY === 0;
     const response = await fetch(sandbox ? '/public/drop' : `/api/imports?mode=${mode}`, {
       method: 'POST',
@@ -101,7 +101,7 @@ export function setupRun() {
     return getJson('/api/import/summary').catch(() => null);
   }
 
-  async function start({ zips, faults, mode }) {
+  async function start({ zips, faults, mode, accounts }) {
     run = state();
     run.total = zips;
     result.hidden = true;
@@ -125,7 +125,7 @@ export function setupRun() {
         const index = next++;
         if (performance.now() - tokenAt > TOKEN_REFRESH_MS) { token = await newToken(); tokenAt = performance.now(); }
         try {
-          await upload(index, mode, faults, () => token, seedBase + index);
+          await upload(index, mode, faults, accounts, () => token, seedBase + index);
         } catch {
           tiles.refused(index, 0, index % SANDBOX_EVERY !== 0);
           run.refused += 1;
@@ -187,8 +187,8 @@ export function setupRun() {
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     if (run) return;
-    const { zips, faults, mode } = Object.fromEntries(new FormData(form));
-    start({ zips: Number(zips), faults: Number(faults), mode }).catch(() => {
+    const { zips, faults, mode, accounts } = Object.fromEntries(new FormData(form));
+    start({ zips: Number(zips), faults: Number(faults), mode, accounts: Number(accounts) }).catch(() => {
       run = null;
       button.disabled = false;
       button.querySelector('span').textContent = 'Start import';

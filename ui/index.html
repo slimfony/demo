@@ -85,6 +85,12 @@
             <option value="strict">Roll back the whole ZIP (slower)</option>
           </select>
         </label>
+        <label>Account contention
+          <select name="accounts">
+            <option value="60" selected>Normal</option>
+            <option value="6">High (more deadlocks)</option>
+          </select>
+        </label>
         <button type="submit" id="run-start" class="button"><span>Start import</span></button>
       </form>
 
@@ -110,6 +116,11 @@
         <div><span class="num" id="s-rate">0</span><span class="cap">statements per second</span></div>
       </div>
 
+      <div class="chaos">
+        <p class="muted">Break something while an import runs and watch it finish anyway:</p>
+        <p class="chaos-buttons"><button type="button" id="chaos-kill" class="small">Kill an importer</button> <button type="button" id="chaos-cut" class="small">Cut the database connections</button></p>
+        <p class="muted" id="chaos-note" role="status"></p>
+      </div>
       <div id="run-result" class="result" hidden>
         <h3>Done in <span id="r-time">–</span></h3>
         <dl class="list">

@@ -12,6 +12,7 @@ use Demo\Infrastructure\Mercure\TeeLogger;
 use Demo\Infrastructure\Nats\NatsMessagePublisher;
 use Demo\Infrastructure\Nats\StreamProvisioner;
 use Demo\Outbox\OutboxRelay;
+use Demo\Outbox\StaleBatchSweeper;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Config\Env;
@@ -55,9 +56,11 @@ final class RelayKernelFactory
         $endpoint = new MetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
         $worker = new RelayWorker(
             $relay,
+            new StaleBatchSweeper($retry, $this->env->int('SWEEP_AFTER_SECONDS', 120)),
             $endpoint,
             $logger,
             $metrics->counter('outbox_published_total', 'Outbox messages published to the broker.'),
+            $metrics->counter('outbox_swept_total', 'Batches that were forgotten (waiting or running for too long) and announced again.'),
             $metrics->counter('outbox_failures_total', 'Relay turns that failed (broker or database).'),
             $metrics->gauge('outbox_pending', 'Outbox messages waiting to be published.'),
         );

@@ -44,6 +44,7 @@ $panels = [
     $series(14, 'Importers: time to import a ZIP (p50, p95)', [$target('histogram_quantile(0.5, sum by (le) (rate(import_batch_seconds_bucket[10s]))) * 1000', 'p50', 'A'), $target('histogram_quantile(0.95, sum by (le) (rate(import_batch_seconds_bucket[10s]))) * 1000', 'p95', 'B')], 'ms', 12, 28),
     $series(15, 'Importers: statements turned away, by reason', [$target('sum by (reason) (rate(import_statements_rejected_total[10s]))', '{{reason}}')], 'short', 0, 36),
     $series(16, 'Importers: deadlocks run again, per importer', [$target('sum by (instance) (rate(db_retries_total{job="importer"}[10s]))', '{{instance}}')], 'short', 12, 36),
+    $series(17, 'No batch is forgotten: announced again by the sweeper, given up by the importers', [$target('sum(rate(outbox_swept_total[10s]))', 'announced again', 'A'), $target('sum(rate(import_dead_lettered_total[10s]))', 'given up (failed on record)', 'B')], 'short', 0, 44),
     $series(12, 'Uploads: accepted and refused by source and reason', [$target('sum by (source) (rate(imports_accepted_total[10s]))', 'accepted: {{source}}', 'A'), $target('sum by (source, reason) (rate(imports_rejected_total[10s]))', 'refused: {{source}} {{reason}}', 'B')], 'short', 12, 20),
 ];
 

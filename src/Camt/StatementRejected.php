@@ -18,6 +18,8 @@ final class StatementRejected extends \DomainException implements SlimfonyExcept
     public const string ENTRY_OUTSIDE_PERIOD = 'entry_outside_period';
     public const string DUPLICATE_ENTRY = 'duplicate_entry';
     public const string DUPLICATE_STATEMENT = 'duplicate_statement';
+    /** The importer tried the whole batch as often as it may and could not do it (the database kept failing, for example). */
+    public const string GAVE_UP = 'gave_up';
     /** Not the statement's own fault: it was fine, but the ZIP was rolled back because another statement in it was not. */
     public const string ROLLED_BACK = 'rolled_back';
 

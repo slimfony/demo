@@ -9,6 +9,9 @@ use Basis\Nats\Configuration;
 use Basis\Nats\Consumer\AckPolicy;
 use Demo\Camt\CamtParser;
 use Demo\Camt\StatementRules;
+use Demo\Chaos\KillSwitchChaos;
+use Demo\Chaos\KillTokens;
+use Demo\Chaos\NoChaos;
 use Demo\Events\NullEventPublisher;
 use Demo\Infrastructure\Mercure\MercurePublisher;
 use Demo\Infrastructure\Mercure\TeeLogger;
@@ -54,13 +57,15 @@ final class ImporterKernelFactory
         $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: true, applicationName: 'demo-importer');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger, maxAttempts: 8, retries: $metrics->counter('db_retries_total', 'Database operations that were retried (deadlocks, lost connections).', ['reason']));
+        $ackWait = $this->env->int('IMPORT_ACK_WAIT_SECONDS', 60); // how long the broker waits for an acknowledgement before it delivers a message again
         $importer = new BatchImporter(
-            new ImportRepository($connection),
+            new ImportRepository($connection, $ackWait + 30), // a batch still `running` after this long was abandoned
             new ArchiveReader(),
             new CamtParser($this->projectDir . '/schema/camt.053.001.02.xsd'),
             new StatementRules(),
             new StatementWriter(),
             $retry,
+            $this->env->bool('CHAOS_ENABLED') ? new KillSwitchChaos(new KillTokens($connection), $logger) : new NoChaos(),
         );
 
         $nats = new Client(new Configuration(host: $this->env->string('NATS_HOST'), port: $this->env->int('NATS_PORT', 4222), timeout: 2.0));
@@ -68,8 +73,8 @@ final class ImporterKernelFactory
         $consumer->getConfiguration()
             ->setSubjectFilter(StreamProvisioner::ACCEPTED)
             ->setAckPolicy(AckPolicy::EXPLICIT)
-            ->setAckWait(60 * 1_000_000_000) // a batch is imported in well under a second; a minute covers a long deadlock fight
-            ->setMaxDeliver(5);
+            ->setAckWait($ackWait * 1_000_000_000)
+            ->setMaxDeliver(ImporterWorker::MAX_DELIVER);
         $consumer->setBatching(1)->setIterations(1)->setExpires(0.5)->setDelay(0.0); // one message per turn, then back to the loop (and Prometheus)
         $consumer->create();
 
@@ -86,6 +91,7 @@ final class ImporterKernelFactory
             $metrics->counter('import_statements_rejected_total', 'Statements that ended with a reason other than being booked.', ['reason']),
             $metrics->counter('import_entries_total', 'Entries booked.'),
             $metrics->counter('import_worker_failures_total', 'Turns that failed (broker or database).'),
+            $metrics->counter('import_dead_lettered_total', 'Batches given up after the last delivery the broker allows.'),
             $metrics->histogram('import_batch_seconds', 'Time to import one batch.'),
         );
 

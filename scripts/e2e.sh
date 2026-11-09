@@ -65,5 +65,8 @@ for _ in $(seq 1 20); do
 done
 [ -n "$sent" ] && [ "${sent%.*}" -ge 1 ] || fail "Prometheus does not see the relay's metrics"
 
+# chaos: kill importers in the middle of a batch, cut the database connections, lose a message: nothing may be lost
+ZIPS=60 bash scripts/chaos.sh
+
 echo "e2e ok"
 docker compose down -v

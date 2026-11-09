@@ -10,7 +10,10 @@ use Doctrine\DBAL\Connection;
 /** The importer's view of the batches table. Each method is one short, self-contained statement. */
 final class ImportRepository
 {
-    public function __construct(private readonly Connection $connection) {}
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly int $abandonedAfterSeconds = self::ABANDONED_AFTER_SECONDS,
+    ) {}
 
     /** Seconds after which a batch that is still `running` is taken to be abandoned (the broker redelivers its message after 60). */
     public const int ABANDONED_AFTER_SECONDS = 90;
@@ -25,7 +28,7 @@ final class ImportRepository
     {
         $row = $this->connection->fetchAssociative(
             "UPDATE batches SET status = 'running', worker = ?, started_at = now() WHERE id = ? AND (status = 'queued' OR (status = 'running' AND started_at < now() - make_interval(secs => ?))) RETURNING mode, source, payload",
-            [$worker, $batchId, self::ABANDONED_AFTER_SECONDS],
+            [$worker, $batchId, $this->abandonedAfterSeconds],
         );
         if (false === $row) {
             return null;
@@ -45,6 +48,18 @@ final class ImportRepository
     public function release(string $batchId): void
     {
         $this->connection->executeStatement("UPDATE batches SET status = 'queued', worker = NULL, started_at = NULL WHERE id = ? AND status = 'running'", [$batchId]);
+    }
+
+    /**
+     * The batch could not be imported however often it was tried: it ends as failed, with the reason on record, instead of waiting forever.
+     */
+    public function giveUp(string $batchId, int $attempts, string $cause): void
+    {
+        $this->connection->executeStatement(
+            "INSERT INTO import_errors (batch_id, file, reason, detail) VALUES (?, '*', ?, ?)",
+            [$batchId, StatementRejected::GAVE_UP, mb_substr(\sprintf('The importer gave up after %d attempts (%s).', $attempts, $cause), 0, 500)],
+        );
+        $this->finish($batchId, 'failed', 0);
     }
 
     /**

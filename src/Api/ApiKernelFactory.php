@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Demo\Api;
 
+use Demo\Chaos\ChaosSwitch;
 use Demo\Imports\RateLimiter;
 use Demo\Infrastructure\ApcuWindowCounter;
 use Doctrine\DBAL\Connection;
@@ -79,6 +80,7 @@ final class ApiKernelFactory
                 ConnectionLifecycle::class => $lifecycle,
                 Retry::class => $retry,
                 Authenticator::class => $authenticator,
+                ChaosSwitch::class => new ChaosSwitch($this->env->bool('CHAOS_ENABLED')),
                 RateLimiter::class => new RateLimiter(new ApcuWindowCounter(), $this->env->int('SANDBOX_RATE_LIMIT', 1200)), // uploads per minute and client
                 MetricsController::class => new MetricsController($metrics, $this->env->string('METRICS_TOKEN')),
             ],
