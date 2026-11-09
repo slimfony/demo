@@ -35,8 +35,10 @@ final class StatementWriter
      * before any of them is written. The strict mode calls it once for the whole ZIP.
      *
      * @param list<Statement> $statements
+     *
+     * @return array<string, string> the currency of each locked account, by IBAN (the lock query returns it, so it costs no extra round trip)
      */
-    public function lockInOrder(Connection $connection, array $statements): void
+    public function lockInOrder(Connection $connection, array $statements): array
     {
         $accounts = [];
         $statistics = [];
@@ -50,14 +52,22 @@ final class StatementWriter
             }
         }
 
+        $currencies = [];
         foreach (['accounts' => $accounts, 'account_stats' => $statistics] as $table => $ibans) { // the same order of tables everywhere, too
             if ([] === $ibans) {
                 continue;
             }
             $sorted = array_map(strval(...), array_keys($ibans));
             sort($sorted);
-            $connection->executeQuery("SELECT 1 FROM $table WHERE iban IN (?) ORDER BY iban FOR UPDATE", [$sorted], [ArrayParameterType::STRING])->fetchAllAssociative();
+            $column = 'accounts' === $table ? 'currency' : '1';
+            foreach ($connection->executeQuery("SELECT iban, $column AS currency FROM $table WHERE iban IN (?) ORDER BY iban FOR UPDATE", [$sorted], [ArrayParameterType::STRING])->fetchAllAssociative() as $row) {
+                if ('accounts' === $table && \is_string($row['iban']) && \is_string($row['currency'])) {
+                    $currencies[$row['iban']] = $row['currency'];
+                }
+            }
         }
+
+        return $currencies;
     }
 
     /**
@@ -70,10 +80,10 @@ final class StatementWriter
     public function write(Connection $connection, Statement $statement, string $batchId, LockOrder $order = LockOrder::Sorted, bool $locked = false): int
     {
         if (LockOrder::Sorted === $order && !$locked) {
-            $this->lockInOrder($connection, [$statement]);
+            $accountCurrency = $this->lockInOrder($connection, [$statement])[$statement->iban] ?? false;
+        } else {
+            $accountCurrency = $connection->fetchOne('SELECT currency FROM accounts WHERE iban = ? FOR UPDATE', [$statement->iban]);
         }
-
-        $accountCurrency = $connection->fetchOne('SELECT currency FROM accounts WHERE iban = ? FOR UPDATE', [$statement->iban]);
         if (false === $accountCurrency) {
             throw new StatementRejected(StatementRejected::UNKNOWN_ACCOUNT, $statement->file, 'The account is not one of ours.', $statement->id);
         }
