@@ -41,12 +41,10 @@ foreach (['src', 'tests', 'config', 'public', 'bin', 'scripts'] as $folder) {
     }
 }
 
-$composer = json_decode((string) file_get_contents("$root/composer.json"), true, 16, JSON_THROW_ON_ERROR);
-$composer['name'] = $package;
-foreach (['autoload' => 'src/', 'autoload-dev' => 'tests/'] as $section => $path) {
-    $suffix = 'autoload' === $section ? '\\' : '\\Tests\\';
-    $composer[$section]['psr-4'] = [$namespace . $suffix => $path];
-}
-file_put_contents("$root/composer.json", json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
-
+// composer.json is edited as text, not decoded and encoded again: that would turn an empty JSON object into an array
+$json = (string) file_get_contents("$root/composer.json");
+$escaped = str_replace('\\', '\\\\', $namespace);
+$json = preg_replace('/"name":\s*"[^"]*"/', '"name": "' . $package . '"', $json, 1) ?? $json;
+$json = str_replace(['"Demo\\\\Tests\\\\": "tests/"', '"Demo\\\\": "src/"'], ['"' . $escaped . '\\\\Tests\\\\": "tests/"', '"' . $escaped . '\\\\": "src/"'], $json);
+file_put_contents("$root/composer.json", $json);
 echo "$changed files now use the namespace $namespace; composer.json is $package.\nRun: composer dump-autoload && composer ci\n";

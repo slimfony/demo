@@ -1,0 +1,11 @@
+{
+  "name": "slimfony-demo-e2e",
+  "private": true,
+  "description": "Browser test of the demo page. A test tool only: the page itself has no build step and no dependencies.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

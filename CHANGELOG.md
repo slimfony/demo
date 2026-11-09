@@ -9,6 +9,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - **16 PHP workers by default** (`PHP_WORKERS`, `PHP_THREADS`): workers that wait for the database are idle, so there should be more of them than cores. The authenticated read now saturates at about 12,400 requests per second instead of 6,500.
 
 ### Added
+- **A browser test in CI** (Playwright, `e2e/`): the page in a real browser, an import from the first upload to the result card, tokens, the theme. A test tool only: the page keeps its no-build, no-dependency form.
+- **The README picture and recording** come from a real run (`HERO=1 npx playwright test hero`).
 - **Benchmarks** (`benchmarks/`): k6 scripts for the API and the import lane, runners, a report generator and the first results, with the machine described.
 - **Kubernetes manifests** (`k8s/`): probes, security context, autoscaling, disruption budgets, network policies.
 - `scripts/rename.php`: gives the code your own namespace and package name, to start a service from this repository.

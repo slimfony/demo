@@ -6,6 +6,10 @@ A complete service built on [slimfony/core](https://github.com/slimfony/core): P
 docker compose up -d --build --wait
 ```
 
+![A run of 1,000 ZIPs of bank statements: one tile per ZIP, a shield on the ones uploaded with a token, 9,704 statements booked and 296 rejected, no deadlock, in 29 seconds](assets/hero.png)
+
+The picture is a real run of 1,000 ZIPs (10,000 statements). [A recording of the whole run](assets/import.webm) (5 MB).
+
 On Windows, set `BUILDX_BAKE_ENTITLEMENTS_FS=0` before the Docker command, in the same terminal (without it Docker Compose's builder can stop to ask for file system access):
 
 ```bat
@@ -34,6 +38,7 @@ Docker needs about 3 GB of memory for this stack.
 - [What runs](#what-runs)
 - [API](#api)
 - [Performance](#performance)
+- [Start your own service from this repository](#start-your-own-service-from-this-repository)
 - [Development](#development)
 - [Status](#status)
 - [Roadmap](#roadmap)
@@ -106,6 +111,17 @@ Measured with k6 on one laptop-class machine (i5-14400, everything in Docker), s
 | Import of 1,000 ZIPs (10,000 statements) | 14 s with eight importers, 78 s with one; rows are locked in a fixed order, so there is no deadlock and every importer added helps (before: 67 s with eight, because of the deadlocks) |
 
 The benchmarks folder keeps every run, before and after each change.
+## Start your own service from this repository
+
+The code is meant to be copied: the structure (a composition root per process, the compiled container, the Dockerfile, the compose file, the CI) is the part worth keeping, the demo's import is the example.
+
+```bash
+php scripts/rename.php "Acme\Orders" acme/orders   # your namespace and your package name
+composer install && composer dump-autoload
+composer ci
+```
+
+On GitHub, **Use this template** creates a repository with this content and none of its history. What is left to you: remove what you do not need (the import, the identity provider, the chaos switches, the page), and rename the services in `compose.yaml`, the `Dockerfile` and `k8s/`. Keep `tests/ArchitectureTest.php` and the CI: they hold the code to the rules of the core.
 ## Development
 
 ```bash
@@ -113,20 +129,22 @@ composer install
 composer ci          # tests, PHPStan (max), code style
 bash scripts/e2e.sh  # starts the stack and checks it (including the chaos scenario)
 bash scripts/chaos.sh  # on a running stack: kill importers, cut connections, lose a message; nothing may be lost
+
+cd e2e && npm ci && npx playwright install chromium
+npx playwright test    # the page in a real browser, against the running stack
 ```
 
 ## Status
 
-Version 0.2.0 (see [CHANGELOG.md](CHANGELOG.md)), pre-1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay, the importers (`partial` and `strict` mode, deadlock retries) and the page with the live import view work, and are exercised by the tests and by `scripts/e2e.sh` in CI.
+Version 0.3.0 (see [CHANGELOG.md](CHANGELOG.md)), pre-1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay with its sweeper, the importers (`partial` and `strict` mode, ordered locking), the chaos switches, the page with the live import view, the benchmarks, the Kubernetes manifests and the template script work, and are exercised by the tests, by `scripts/e2e.sh` and by a browser test in CI.
 
-The numbers the page shows come from a laptop running everything in Docker, with the browser as the load generator. They show that the pieces work together; they are not a benchmark.
+The numbers on the page and in the benchmarks come from one laptop-class machine running everything in Docker. They show how the pieces behave and how a change moves them; they are not a capacity figure for a cluster.
 
 ## Roadmap
 
-1. **A real load test** with k6 (the API at a fixed arrival rate, the importers with 1, 2, 4 and 8 replicas, with and without PgBouncer), the results and the hardware published in the repository.
-2. **Kubernetes manifests** (probes, autoscaling, disruption budget, security context) and a **template repository** to start a service of your own from.
-3. **A browser test in CI** (Playwright) that runs an import and checks the page; the README gets a picture and a short recording of a real run.
-
+1. **A review of minimalism and speed.** One importer spends about 78 ms on a ZIP, and the ordered locking did not change that: where does the time go (the database round trips, the events sent to the page one HTTP call at a time, the XML and its schema, the broker)? Measure it stage by stage, then simplify and speed up what the numbers point at.
+2. **More runs of the benchmark**: a second machine, more importers than eight, the importers on their own cores.
+3. **What the demo teaches the core**: the findings that need a change in slimfony/core (garbage collection in the worker, the first request after a cold start, metrics for command line processes) are collected in the core's roadmap.
 ## License
 
 MIT
