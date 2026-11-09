@@ -15,6 +15,23 @@ test('the page loads and shows the running system', async ({ page }) => {
   await expect(page.locator('[data-fact="server"]').first()).toContainText('worker');
 });
 
+test('a reload during an import does not lose it: the page follows the run again', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#run-form select[name="zips"]').selectOption('1000');
+  await page.locator('#run-start').click();
+  await expect(page.locator('#run-tiles .tile')).toHaveCount(1000);
+  await expect.poll(() => number(page.locator('#p-uploaded')), { timeout: 30_000 }).toBeGreaterThan(0);
+
+  // F5 while the ZIPs are uploaded and imported: the server goes on, the page joins the run again
+  await page.reload();
+  await expect(page.locator('#run-tiles .tile')).toHaveCount(1000);
+  await expect(page.locator('#run-start')).toBeDisabled();
+
+  await expect(page.locator('#run-result')).toBeVisible({ timeout: 170_000 });
+  expect(await number(page.locator('#p-imported'))).toBe(1000);
+  await expect(page.locator('#run-tiles .tile.queued, #run-tiles .tile.running, #run-tiles .tile.refused')).toHaveCount(0);
+});
+
 test('an import runs from the first upload to the result card', async ({ page }) => {
   await page.goto('/');
   await page.locator('#run-form select[name="zips"]').selectOption('50');

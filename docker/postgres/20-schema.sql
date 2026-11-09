@@ -40,3 +40,27 @@ CREATE TABLE outbox (
     published_at timestamptz
 );
 CREATE INDEX outbox_unpublished ON outbox (id) WHERE published_at IS NULL;
+
+-- A run of the page's import. The server generates and uploads the ZIPs (the `generator` service), so a reload of the page
+-- neither stops the run nor loses it: the page follows it from these tables and from `batches`.
+CREATE TABLE import_runs (
+    id          uuid        PRIMARY KEY,
+    zips        integer     NOT NULL CHECK (zips BETWEEN 1 AND 1000),
+    fault_rate  numeric     NOT NULL CHECK (fault_rate BETWEEN 0 AND 1),
+    mode        text        NOT NULL CHECK (mode IN ('partial', 'strict')),
+    accounts    integer     NOT NULL CHECK (accounts BETWEEN 1 AND 500),
+    lock_order  text        NOT NULL CHECK (lock_order IN ('sorted', 'appearance')),
+    status      text        NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'uploading', 'uploaded')),
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    uploaded_at timestamptz
+);
+
+-- What became of every ZIP of a run at the door: the batch it created, or the refusal.
+CREATE TABLE import_run_items (
+    run_id      uuid    NOT NULL REFERENCES import_runs (id) ON DELETE CASCADE,
+    idx         integer NOT NULL,
+    batch_id    uuid,
+    via         text    NOT NULL CHECK (via IN ('jwt', 'public')),
+    http_status integer NOT NULL,
+    PRIMARY KEY (run_id, idx)
+);

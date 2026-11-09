@@ -46,7 +46,7 @@ Docker needs about 3 GB of memory for this stack.
 
 ## On the page
 
-- **Import.** Press *Start import*: the page generates up to 1,000 ZIPs of 10 statements each and uploads them to the API (19 in 20 with a token, the rest through the anonymous sandbox). One tile per ZIP shows where it is: waiting, importing, booked, booked with rejected statements, rolled back, refused. A shield marks the uploads that came with a verified token. Numbers, a result card and a live log of the services follow.
+- **Import.** Press *Start import*: the server generates up to 1,000 ZIPs of 10 statements each and uploads them to the API (19 in 20 with a token, the rest through the anonymous sandbox). The run lives on the server, so a reload of the page (or a second visitor) joins it instead of losing it. One tile per ZIP shows where it is: waiting, importing, booked, booked with rejected statements, rolled back, refused. A shield marks the uploads that came with a verified token. Numbers, a result card and a live log of the services follow.
 - **Chaos.** While an import runs, kill an importer in the middle of a batch or cut the database connections. Every ZIP still ends up booked, or failed with the reason on record; none stays waiting. "Account contention: high" spreads the statements over six accounts, so the importers meet on the same rows and the deadlocks multiply.
 - **Tokens and keys.** Send a ZIP with a valid or a broken token and see why it is refused. Rotate the identity provider's signing key and see the API pick up the new one.
 - **Send requests.** The browser sends a few thousand requests to the API as fast as it can.
@@ -74,6 +74,7 @@ The statements come from a generator that makes valid files and, on request, fil
 | `postgres` + `pgbouncer` | database, reached through a transaction pooler |
 | `idp` | small identity provider: publishes its keys (JWKS) over HTTPS and hands out demo tokens |
 | `relay` | command line process that publishes the outbox rows to NATS JetStream (several can run side by side), and announces batches that were forgotten again (the sweeper) |
+| `generator` | command line process that uploads the ZIPs of the page's import runs to the API (the page asks for a run, this process serves it) |
 | `importer` (4 replicas) | take batches from NATS and book the statements; `docker compose up --scale importer=8` runs more |
 | `nats` | JetStream message broker |
 | `prometheus` + `grafana` | metrics, scraped every 2 seconds, with a provisioned dashboard |

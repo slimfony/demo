@@ -9,8 +9,10 @@ use Demo\Api\Controller\DemoRotateController;
 use Demo\Api\Controller\DemoTokenController;
 use Demo\Api\Controller\ImportRunController;
 use Demo\Api\Controller\ImportSummaryController;
+use Demo\Api\Controller\LatestRunController;
 use Demo\Api\Controller\RuntimeController;
 use Demo\Api\Controller\SampleArchiveController;
+use Demo\Api\Controller\StartRunController;
 use Demo\Api\Controller\StatsController;
 use Demo\Api\Controller\StatusController;
 use Demo\Api\Controller\UploadController;
@@ -37,6 +39,8 @@ return static function (RouteCollection $r): void {
 
     $r->add('api_import_summary', new Route('/api/import/summary', $public(ImportSummaryController::class), methods: ['GET']));
     $r->add('api_import_run', new Route('/api/import/run', $public(ImportRunController::class), methods: ['GET']));
+    $r->add('api_run_start', new Route('/api/import/runs', $public(StartRunController::class), methods: ['POST']));
+    $r->add('api_run_latest', new Route('/api/import/runs/latest', $public(LatestRunController::class), methods: ['GET']));
     $r->add('api_batch_list', new Route('/api/batches', $public(BatchListController::class), methods: ['GET']));
 
     // Break things on purpose (needs the chaos:write scope, and CHAOS_ENABLED in the environment).

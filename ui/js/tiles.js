@@ -66,6 +66,18 @@ export function createTiles(root) {
       else paint(tile, 'queued');
       return true;
     },
+    /** One ZIP of a run as the server has it: refused at the door, or a batch that waits, runs or is finished. */
+    fromItem(item) {
+      const tile = tiles[item.idx];
+      if (!tile) return;
+      tile.classList.toggle('jwt', 'jwt' === item.via);
+      if (202 !== item.http_status) {
+        paint(tile, 'refused', ` (HTTP ${item.http_status || 'no answer'})`);
+        return;
+      }
+      byId.set(item.id, tile);
+      this.apply(item);
+    },
     knows(id) {
       return byId.has(id);
     },

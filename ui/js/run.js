@@ -3,20 +3,11 @@ import { on } from './events.js';
 import { animateNumber, formatInteger } from './format.js';
 import { createTiles } from './tiles.js';
 
-const CONCURRENCY = 6; // what a browser allows per host over HTTP/1.1
-const SANDBOX_EVERY = 20; // one ZIP in twenty goes through the anonymous sandbox, the rest with a token
-const TOKEN_REFRESH_MS = 4 * 60 * 1000; // a demo token lives five minutes
-const RECONCILE_MS = 1000; // how often the page asks the database where every batch of the run stands
+const POLL_MS = 1000; // how often the page asks the database where the run stands
 const STALL_MS = 150_000; // no progress for this long: stop waiting (a killed importer's batches come back after about a minute)
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function newToken() {
-  const response = await fetch('/api/demo-token?kind=valid', { method: 'POST', cache: 'no-store' });
-  if (!response.ok) throw new Error('The identity provider did not answer.');
-  return (await response.json()).token;
-}
 
 function show(id, value) {
   animateNumber($(id), value, formatInteger, 250);
@@ -31,7 +22,7 @@ export function setupRun() {
 
   const state = () => ({
     accepted: 0, refused: 0, total: 0, finished: 0, booked: 0, rejected: 0, rolledBack: 0,
-    workers: new Set(), startedAt: 0, finishedAt: 0, progressAt: 0, since: 0,
+    workers: new Set(), startedAt: 0, finishedAt: 0, progressAt: 0, uploaded: false,
   });
 
   function render(s) {
@@ -50,112 +41,118 @@ export function setupRun() {
     if (!tiles.update(event)) setTimeout(() => tiles.update(event), 300); // it can come before the answer to the upload
   });
 
-  // The database is the truth: every second the page asks where each batch of this run stands, paints the tiles from
-  // that and counts from it. A lost event, a dropped connection or a reload of the hub change nothing.
-  async function reconcile() {
-    const { batches } = await getJson(`/api/import/run?since=${run.since}`);
+  // The database is the truth: the server uploads the ZIPs of a run (the generator service), and the page asks every second
+  // where every ZIP stands, paints the tiles from that and counts from it. Events only make the tiles move a little sooner.
+  // Because the run lives on the server, a reload of the page changes nothing: it finds the run and follows it again.
+  async function poll() {
+    const { run: serverRun, items, at } = await getJson('/api/import/runs/latest');
+    if (!serverRun) return null;
+    run.uploaded = 'uploaded' === serverRun.status;
+    run.startedAt = performance.now() - Math.max(0, at - serverRun.created_at) * 1000; // by the server's clock, so the two clocks need not agree
     let finished = 0;
     let booked = 0;
     let rejected = 0;
     let rolledBack = 0;
+    let refused = 0;
     const workers = new Set();
-    for (const batch of batches) {
-      if (!tiles.apply(batch)) continue; // another visitor's batch
-      if ('done' === batch.status || 'failed' === batch.status) {
-        finished += 1;
-        booked += batch.statements_ok;
-        rejected += batch.statements_failed;
-        rolledBack += batch.statements_rolled_back;
+    for (const item of items) {
+      tiles.fromItem(item);
+      if (202 !== item.http_status) {
+        refused += 1;
+        finished += 1; // nothing will be imported for a refused ZIP
+        continue;
       }
-      if (batch.worker) workers.add(batch.worker);
+      if ('done' === item.status || 'failed' === item.status) {
+        finished += 1;
+        booked += item.statements_ok;
+        rejected += item.statements_failed;
+        rolledBack += item.statements_rolled_back;
+      }
+      if (item.worker) workers.add(item.worker);
     }
-    finished += run.refused; // nothing will be imported for the refused ones
-    if (finished !== run.finished) {
+    if (finished !== run.finished || items.length !== run.accepted + run.refused) {
       run.progressAt = performance.now();
-      if (finished === run.total) run.finishedAt = performance.now();
     }
-    Object.assign(run, { finished, booked, rejected, rolledBack, workers });
+    if (finished === run.total && !run.finishedAt) run.finishedAt = performance.now();
+    Object.assign(run, { finished, booked, rejected, rolledBack, workers, refused, accepted: items.length - refused });
     render(run);
-  }
 
-  async function upload(index, mode, lockOrder, faults, accounts, token, seed) {
-    const sample = await (await fetch(`/api/sample.zip?files=10&seed=${seed}&fault_rate=${faults}&accounts=${accounts}`, { cache: 'no-store' })).blob();
-    const sandbox = index % SANDBOX_EVERY === 0;
-    const response = await fetch(sandbox ? '/public/drop' : `/api/imports?mode=${mode}&lock_order=${lockOrder}`, {
-      method: 'POST',
-      body: sample,
-      headers: sandbox ? {} : { Authorization: `Bearer ${token()}` },
-    });
-    if (202 === response.status) {
-      const body = await response.json();
-      tiles.accepted(index, body.id, !sandbox);
-      run.accepted += 1;
-    } else {
-      tiles.refused(index, response.status, !sandbox);
-      run.refused += 1;
-    }
-    render(run);
+    return serverRun;
   }
 
   async function snapshot() {
     return getJson('/api/import/summary').catch(() => null);
   }
 
-  async function start({ zips, faults, mode, accounts, lockOrder }) {
+  function busy(zips) {
     run = state();
     run.total = zips;
     result.hidden = true;
     tiles.reset(zips);
     button.disabled = true;
     button.querySelector('span').textContent = 'Importing…';
-
-    const before = await snapshot();
-    // the moment the run starts, by the server's clock, so the two clocks need not agree
-    run.since = (before?.at ?? Math.floor(Date.now() / 1000)) - 2;
     run.startedAt = performance.now();
     run.progressAt = run.startedAt;
     render(run);
-    let token = await newToken();
-    let tokenAt = performance.now();
-    const seedBase = Math.floor(Date.now() % 900_000_000) + 1;
-    let next = 0;
+  }
 
-    const worker = async () => {
-      while (next < zips) {
-        const index = next++;
-        if (performance.now() - tokenAt > TOKEN_REFRESH_MS) { token = await newToken(); tokenAt = performance.now(); }
-        try {
-          await upload(index, mode, lockOrder, faults, accounts, () => token, seedBase + index);
-        } catch {
-          tiles.refused(index, 0, index % SANDBOX_EVERY !== 0);
-          run.refused += 1;
-          render(run);
-        }
-      }
-    };
+  function idle() {
+    run = null;
+    button.disabled = false;
+    button.querySelector('span').textContent = 'Start import';
+  }
 
-    // while the ZIPs go up and are imported, the page keeps in step with the database, and Prometheus says how fast
-    const timer = setInterval(() => reconcile().catch(() => {}), RECONCILE_MS);
+  /** Follows the run that is going on until every ZIP is finished (or nothing moves for a long time), then shows the result. */
+  async function follow(before) {
     const rates = setInterval(async () => {
       const summary = await snapshot();
       if (summary?.statements_per_second != null) show('s-rate', Math.round(summary.statements_per_second));
       if (before && summary?.deadlock_retries != null) show('s-retries', Math.max(0, Math.round(summary.deadlock_retries - (before.deadlock_retries ?? 0))));
     }, 1000);
 
-    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-    while (run.finished < run.total && performance.now() - run.progressAt < STALL_MS) await sleep(250);
-    clearInterval(timer);
-    clearInterval(rates);
-    await reconcile().catch(() => {});
-
-    const seconds = ((run.finishedAt || performance.now()) - run.startedAt) / 1000;
-    await sleep(2500); // Prometheus scrapes every two seconds: let it catch up before the retry count is read
-    finish(run, seconds, before, await snapshot());
-    run = null;
-    button.disabled = false;
-    button.querySelector('span').textContent = 'Start import';
+    try {
+      while (true) {
+        await poll().catch(() => {});
+        if (run.finished >= run.total && run.uploaded) break;
+        if (performance.now() - run.progressAt > STALL_MS) break;
+        await sleep(POLL_MS);
+      }
+      const seconds = ((run.finishedAt || performance.now()) - run.startedAt) / 1000;
+      await sleep(2500); // Prometheus scrapes every two seconds: let it catch up before the retry count is read
+      finish(run, seconds, before, await snapshot());
+    } finally {
+      clearInterval(rates);
+      idle();
+    }
   }
 
+  async function start({ zips, faults, mode, accounts, lockOrder }) {
+    const response = await fetch('/api/import/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zips, faults, mode, accounts, lock_order: lockOrder }),
+    });
+    if (409 === response.status) {
+      // someone else's run is going on: show it instead
+      await attach();
+      return;
+    }
+    if (!response.ok) throw new Error('The run was not accepted.');
+    const before = await snapshot();
+    busy(zips);
+    await follow(before);
+  }
+
+  /** A page that was just opened or reloaded joins the run that is going on, if there is one. */
+  async function attach() {
+    const { run: serverRun, items } = await getJson('/api/import/runs/latest');
+    if (!serverRun || run) return;
+    const settled = items.length === serverRun.zips && items.every((item) => 202 !== item.http_status || 'done' === item.status || 'failed' === item.status);
+    if ('uploaded' === serverRun.status && settled) return; // nothing is going on
+    if (Date.now() / 1000 - serverRun.created_at > 900) return; // an abandoned run
+    busy(serverRun.zips);
+    await follow(null);
+  }
   function finish(s, seconds, before, after) {
     const delta = (key) => (after && before ? Math.max(0, (after.batches?.[key] ?? 0) - (before.batches?.[key] ?? 0)) : null);
     const reasons = after?.rejected_by_reason ?? {};
@@ -188,10 +185,8 @@ export function setupRun() {
     event.preventDefault();
     if (run) return;
     const { zips, faults, mode, accounts, lock_order: lockOrder } = Object.fromEntries(new FormData(form));
-    start({ zips: Number(zips), faults: Number(faults), mode, accounts: Number(accounts), lockOrder }).catch(() => {
-      run = null;
-      button.disabled = false;
-      button.querySelector('span').textContent = 'Start import';
-    });
+    start({ zips: Number(zips), faults: Number(faults), mode, accounts: Number(accounts), lockOrder }).catch(idle);
   });
+
+  attach().catch(() => {});
 }

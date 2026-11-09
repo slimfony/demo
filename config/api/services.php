@@ -9,8 +9,10 @@ use Demo\Api\Controller\DemoRotateController;
 use Demo\Api\Controller\DemoTokenController;
 use Demo\Api\Controller\ImportRunController;
 use Demo\Api\Controller\ImportSummaryController;
+use Demo\Api\Controller\LatestRunController;
 use Demo\Api\Controller\RuntimeController;
 use Demo\Api\Controller\SampleArchiveController;
+use Demo\Api\Controller\StartRunController;
 use Demo\Api\Controller\StatsController;
 use Demo\Api\Controller\StatusController;
 use Demo\Api\Controller\UploadController;
@@ -20,6 +22,7 @@ use Demo\Chaos\KillTokens;
 use Demo\Imports\ArchiveInspector;
 use Demo\Imports\BatchRepository;
 use Demo\Imports\RateLimiter;
+use Demo\Imports\RunRepository;
 use Demo\Infrastructure\Http\HttpReadinessCheck;
 use Demo\Infrastructure\Idp\HttpTokenSource;
 use Demo\Infrastructure\Prometheus\HttpPrometheusQuery;
@@ -96,6 +99,9 @@ return static function (ContainerBuilder $c): void {
     // Imports: the upload (two routes), the state of a batch, and the demo tokens for the page.
     $c->register(ArchiveInspector::class);
     $c->register(BatchRepository::class);
+    $c->register(RunRepository::class);
+    $c->register(StartRunController::class)->setAutowired(true);
+    $c->register(LatestRunController::class)->setAutowired(true);
     $c->register(UploadController::class)->setAutowired(true);
     $c->register(BatchController::class)->setAutowired(true);
     $c->register(HttpTokenSource::class)->setArguments(['%env(IDP_URL)%']);

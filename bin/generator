@@ -1,0 +1,52 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Demo\Camt\StatementGenerator;
+use Demo\Generator\RunGenerator;
+use Demo\Imports\RunRepository;
+use Demo\Infrastructure\Idp\HttpTokenSource;
+use Slimfony\Core\Config\Env;
+use Slimfony\Core\Database\ConnectionFactory;
+use Slimfony\Core\Log\JsonStdoutLogger;
+use Slimfony\Core\Log\RequestContext;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+// The process that uploads the ZIPs of the page's import runs: it waits for a run in the database, serves it and waits again.
+$env = Env::fromGlobals();
+$logger = new JsonStdoutLogger($env->string('LOG_LEVEL', 'info'), new RequestContext());
+$connection = ConnectionFactory::create(
+    \sprintf(
+        'pdo-pgsql://%s:%s@%s:%d/%s',
+        rawurlencode($env->string('DB_USER')),
+        rawurlencode($env->string('DB_PASSWORD')),
+        $env->string('DB_HOST'),
+        $env->int('DB_PORT', 5432),
+        $env->string('DB_NAME'),
+    ),
+    transactionPooling: $env->bool('DB_TRANSACTION_POOLING', true),
+    applicationName: 'demo-generator',
+);
+$generator = new RunGenerator(
+    $connection,
+    new RunRepository(),
+    new StatementGenerator(),
+    new HttpTokenSource($env->string('IDP_URL')),
+    rtrim($env->string('API_URL'), '/'),
+    $logger,
+);
+
+$logger->info('Run generator started');
+while (true) {
+    try {
+        if (!$generator->serveOne()) {
+            usleep(300_000);
+        }
+    } catch (Throwable $e) {
+        $logger->error('A run failed', ['exception' => $e]);
+        $connection->close();
+        sleep(1);
+    }
+}

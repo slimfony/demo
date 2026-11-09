@@ -159,6 +159,42 @@ services:
       - ALL
     mem_limit: 128m
 
+  # Uploads the ZIPs of the page's import runs (the page asks for a run, this process serves it), so a reload of the page does not stop a run.
+  generator:
+    <<: *service
+    image: slimfony-demo:dev
+    command: ["php", "bin/generator"]
+    healthcheck:
+      disable: true # the image's own check probes the web server; this process is its only process: if it dies, the container does
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+      idp:
+        condition: service_healthy
+    environment:
+      LOG_LEVEL: info
+      DB_HOST: ${BENCH_DB_HOST:-pgbouncer}
+      DB_PORT: "${BENCH_DB_PORT:-6432}"
+      DB_TRANSACTION_POOLING: "${BENCH_DB_POOLING:-true}"
+      DB_NAME: demo
+      DB_USER: demo
+      DB_PASSWORD_FILE: /secrets/db_password
+      IDP_URL: https://idp:8443
+      API_URL: http://web:8080
+    volumes:
+      - secrets:/secrets:ro
+      - idpdata:/idp-ca:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+
   # Imports the uploaded batches. Any number can run side by side (`docker compose up --scale importer=8`): they share the work through NATS.
   importer:
     <<: *service
