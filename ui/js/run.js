@@ -7,7 +7,7 @@ const CONCURRENCY = 6; // what a browser allows per host over HTTP/1.1
 const SANDBOX_EVERY = 20; // one ZIP in twenty goes through the anonymous sandbox, the rest with a token
 const TOKEN_REFRESH_MS = 4 * 60 * 1000; // a demo token lives five minutes
 const RECONCILE_MS = 1000; // how often the page asks the database where every batch of the run stands
-const STALL_MS = 60_000; // no progress for this long: stop waiting
+const STALL_MS = 150_000; // no progress for this long: stop waiting (a killed importer's batches come back after about a minute)
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,6 +1,6 @@
 // Chaos buttons: break something on purpose while an import runs, to show that every ZIP still ends up booked or failed on record.
 const ACTIONS = {
-  'chaos-kill': { path: '/api/chaos/kill-importer', done: () => 'An importer will die the next time it takes a batch, in the middle of it. Watch the log: the batch is taken again after a short wait.' },
+  'chaos-kill': { path: '/api/chaos/kill-importer', done: () => 'An importer will die the next time it takes a batch, in the middle of it. The batch it was working on shows as importing for about a minute, then another importer takes it again. Watch the log.' },
   'chaos-cut': { path: '/api/chaos/cut-connections', done: (body) => `${body.terminated} database connections were terminated. The services reconnect and go on.` },
 };
 
