@@ -54,7 +54,7 @@ final class ImporterKernelFactory
         $hub = $this->env->string('MERCURE_URL', '');
         $events = '' === $hub ? new NullEventPublisher() : new MercurePublisher($hub, $this->env->string('MERCURE_KEY'));
         $logger = new TeeLogger(new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context), $events, 'importer');
-        $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: true, applicationName: 'demo-importer');
+        $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: $this->env->bool('DB_TRANSACTION_POOLING', true), applicationName: 'demo-importer');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger, maxAttempts: 8, retries: $metrics->counter('db_retries_total', 'Database operations that were retried (deadlocks, lost connections).', ['reason']));
         $ackWait = $this->env->int('IMPORT_ACK_WAIT_SECONDS', 60); // how long the broker waits for an acknowledgement before it delivers a message again

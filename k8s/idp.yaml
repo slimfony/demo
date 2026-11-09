@@ -1,0 +1,51 @@
+# The demo identity provider. A real deployment uses its own issuer (Keycloak, Entra, Auth0, ...): set JWKS_URI,
+# JWT_ISSUER and JWT_AUDIENCE in the ConfigMap to its values and leave this file out.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: idp
+  labels: { app.kubernetes.io/name: idp, app.kubernetes.io/part-of: slimfony-demo }
+spec:
+  replicas: 1 # the signing key lives in the memory of one pod
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: idp }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: idp, app.kubernetes.io/part-of: slimfony-demo }
+    spec:
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: idp
+          image: slimfony-demo:0.2.0
+          command: ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile.idp", "--adapter", "caddyfile"]
+          ports:
+            - { name: https, containerPort: 8443 }
+          env:
+            - { name: JWT_ISSUER, value: "https://idp:8443" }
+            - { name: JWT_AUDIENCE, value: slimfony-demo }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          readinessProbe:
+            exec: { command: ["curl", "-fsSk", "--resolve", "idp:8443:127.0.0.1", "https://idp:8443/healthz"] }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: config, mountPath: /config }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: data, emptyDir: {} }
+        - { name: config, emptyDir: {} }
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: idp
+spec:
+  selector: { app.kubernetes.io/name: idp }
+  ports:
+    - { name: https, port: 8443, targetPort: https }

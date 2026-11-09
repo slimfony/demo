@@ -1,0 +1,112 @@
+# The web server: the API and the static page, in FrankenPHP worker mode.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels: { app.kubernetes.io/name: web, app.kubernetes.io/part-of: slimfony-demo }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app.kubernetes.io/name: web }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: web, app.kubernetes.io/part-of: slimfony-demo }
+    spec:
+      terminationGracePeriodSeconds: 30
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: slimfony-demo:0.2.0
+          ports:
+            - { name: http, containerPort: 8080 }
+          envFrom:
+            - configMapRef: { name: demo-config }
+          env:
+            - { name: DB_PASSWORD_FILE, value: /secrets/db_password }
+            - { name: METRICS_TOKEN_FILE, value: /secrets/metrics_token }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          # Kubernetes asks the questions the application was built to answer:
+          # startup and readiness use /readyz (database), liveness uses /healthz (never touches a dependency).
+          startupProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 500m, memory: 256Mi }
+            limits: { memory: 640Mi }
+          volumeMounts:
+            - { name: secrets, mountPath: /secrets, readOnly: true }
+            - { name: idp-ca, mountPath: /idp-ca/caddy/pki/authorities/local, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+            - { name: caddy-data, mountPath: /data }
+            - { name: caddy-config, mountPath: /config }
+      volumes:
+        - name: secrets
+          secret: { secretName: demo-secrets, defaultMode: 0440 }
+        - name: idp-ca
+          secret: { secretName: idp-ca }
+        - { name: tmp, emptyDir: {} }
+        - { name: caddy-data, emptyDir: {} }
+        - { name: caddy-config, emptyDir: {} }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: web }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  labels: { app.kubernetes.io/name: web }
+spec:
+  selector: { app.kubernetes.io/name: web }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+# Scale on CPU. The API is cheap per request, so this reacts to real load, not to idle workers.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: web }
+  minReplicas: 3
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+  behavior:
+    scaleDown: { stabilizationWindowSeconds: 300 }
+---
+# A voluntary disruption (a node drain) never takes more than one web pod at a time.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: web }

@@ -42,7 +42,7 @@ final class RelayKernelFactory
         $hub = $this->env->string('MERCURE_URL', '');
         $events = '' === $hub ? new NullEventPublisher() : new MercurePublisher($hub, $this->env->string('MERCURE_KEY'));
         $logger = new TeeLogger(new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context), $events, 'relay');
-        $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: true, applicationName: 'demo-relay');
+        $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: $this->env->bool('DB_TRANSACTION_POOLING', true), applicationName: 'demo-relay');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger);
         $nats = new Client(new Configuration(host: $this->env->string('NATS_HOST'), port: $this->env->int('NATS_PORT', 4222), timeout: 2.0));

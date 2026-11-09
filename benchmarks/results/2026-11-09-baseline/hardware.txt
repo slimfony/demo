@@ -1,0 +1,6 @@
+Date: 2026-11-09T15:26Z
+Host: Intel(R) Core(TM) i5-14400  RAM: 32 GB  
+Docker: engine 29.9.2, 16 CPUs, 8320176128 bytes memory
+k6: k6 v2.3.0 (commit/e088784614, go1.27.1, linux/amd64)
+Stack: slimfony/demo 0.2.0 plus the benchmark scripts (commit that adds benchmarks/), default settings: 4 PHP workers in the web server, 4 importers, PgBouncer on
+Services: web with 4 PHP workers (FrankenPHP 1.13, PHP 8.4, JIT tracing), PostgreSQL 17, PgBouncer 1.26, NATS 2.15

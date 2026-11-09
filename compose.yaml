@@ -139,8 +139,9 @@ services:
         condition: service_healthy
     environment:
       LOG_LEVEL: info
-      DB_HOST: pgbouncer
-      DB_PORT: "6432"
+      DB_HOST: ${BENCH_DB_HOST:-pgbouncer} # the benchmark can point the services at PostgreSQL directly
+      DB_PORT: "${BENCH_DB_PORT:-6432}"
+      DB_TRANSACTION_POOLING: "${BENCH_DB_POOLING:-true}"
       DB_NAME: demo
       DB_USER: demo
       DB_PASSWORD_FILE: /secrets/db_password
@@ -176,8 +177,9 @@ services:
         condition: service_healthy
     environment:
       LOG_LEVEL: info
-      DB_HOST: pgbouncer
-      DB_PORT: "6432"
+      DB_HOST: ${BENCH_DB_HOST:-pgbouncer} # the benchmark can point the services at PostgreSQL directly
+      DB_PORT: "${BENCH_DB_PORT:-6432}"
+      DB_TRANSACTION_POOLING: "${BENCH_DB_POOLING:-true}"
       DB_NAME: demo
       DB_USER: demo
       DB_PASSWORD_FILE: /secrets/db_password
@@ -216,8 +218,9 @@ services:
       - "8443:8443"
     environment:
       LOG_LEVEL: info
-      DB_HOST: pgbouncer
-      DB_PORT: "6432"
+      DB_HOST: ${BENCH_DB_HOST:-pgbouncer} # the benchmark can point the services at PostgreSQL directly
+      DB_PORT: "${BENCH_DB_PORT:-6432}"
+      DB_TRANSACTION_POOLING: "${BENCH_DB_POOLING:-true}"
       DB_NAME: demo
       DB_USER: demo
       DB_PASSWORD_FILE: /secrets/db_password

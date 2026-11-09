@@ -33,6 +33,7 @@ Docker needs about 3 GB of memory for this stack.
 - [The demo case: importing bank statements](#the-demo-case-importing-bank-statements)
 - [What runs](#what-runs)
 - [API](#api)
+- [Performance](#performance)
 - [Development](#development)
 - [Status](#status)
 - [Roadmap](#roadmap)
@@ -94,6 +95,17 @@ The containers run as a non-root user, with a read-only file system, no capabili
 
 Every route needs a verified token unless it is marked public (deny by default); a request for an unknown path gets 401 as well, so a stranger cannot map the API. An accepted upload is stored together with an outbox row in one transaction; the batch records whether it came with a token (`jwt`), who sent it and which key vouched for it, or came from the sandbox (`public`). The demo identity provider gives tokens to anybody: that is the demo, a real provider authenticates first.
 
+## Performance
+
+Measured with k6 on one laptop-class machine (i5-14400, everything in Docker), so read the ratios rather than the absolute numbers. Method, raw results and the machine are in [benchmarks/](benchmarks/README.md).
+
+| What | Result |
+| --- | --- |
+| `GET /healthz` | 15,000 requests per second without an error or a dropped request (p95 7 ms) |
+| `GET /api/batches/{id}` (verified token, database read) | saturates at about 6,300 requests per second; the limit is the number of PHP workers waiting for the database, not the CPU |
+| Import of 1,000 ZIPs (10,000 statements) | 83 s with one importer, 35 s with four; with eight importers the deadlocks on the shared account rows make it slower again (70 s) |
+
+These are the numbers before any tuning; the benchmarks folder keeps every run, so a change can be shown against them.
 ## Development
 
 ```bash

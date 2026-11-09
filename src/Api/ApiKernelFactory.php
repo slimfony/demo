@@ -40,7 +40,7 @@ final class ApiKernelFactory
         $context = new RequestContext();
         $logger = new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context);
         $metrics = new MetricsRegistry(new ApcuStorage());
-        $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: true, applicationName: 'demo-api');
+        $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: $this->env->bool('DB_TRANSACTION_POOLING', true), applicationName: 'demo-api');
         $lifecycle = new ConnectionLifecycle(
             $connection,
             $logger,

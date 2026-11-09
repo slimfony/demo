@@ -1,0 +1,80 @@
+# Settings that are not secret. The secrets (database password, metrics token, Mercure key) are in the Secret `demo-secrets`
+# and reach the pods as files (DB_PASSWORD_FILE and friends); see the README of this folder.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-config
+data:
+  LOG_LEVEL: info
+  # PostgreSQL behind PgBouncer (transaction pooling), and NATS with JetStream: both run in the cluster (see the README here)
+  DB_HOST: pgbouncer
+  DB_PORT: "6432"
+  DB_NAME: demo
+  DB_USER: demo
+  DB_TRANSACTION_POOLING: "true"
+  NATS_HOST: nats
+  NATS_MONITOR_URL: http://nats:8222
+  PROMETHEUS_URL: http://prometheus:9090
+  MERCURE_URL: http://web/.well-known/mercure
+  # the identity provider
+  IDP_URL: https://idp:8443
+  JWKS_URI: https://idp:8443/.well-known/jwks.json
+  JWT_ISSUER: https://idp:8443
+  JWT_AUDIENCE: slimfony-demo
+  SANDBOX_RATE_LIMIT: "1200"
+  # the chaos switches are off: nobody should be able to break a real deployment through the API
+  CHAOS_ENABLED: "false"
+  TRUSTED_PROXIES: "10.0.0.0/8" # the ingress controller's address range: nothing is trusted unless it is set
+---
+# Only the ingress controller may reach the web pods from outside; nothing else may talk to the workers.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-from-ingress
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: web }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+        - podSelector:
+            matchLabels: { app.kubernetes.io/part-of: slimfony-demo }
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports:
+        - { port: 8080 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: idp-from-the-app
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: idp }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/part-of: slimfony-demo }
+      ports:
+        - { port: 8443 }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m # the largest upload
+    nginx.ingress.kubernetes.io/proxy-buffering: "off" # the Mercure event stream must not be buffered
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: demo.example.com # replace
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: web, port: { number: 80 } }

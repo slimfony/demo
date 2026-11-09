@@ -1,0 +1,123 @@
+# The command line processes: the outbox relay and the importers. Same image as the web server.
+# They have no HTTP port; each serves its Prometheus metrics on 9100 (bearer token).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: relay
+  labels: { app.kubernetes.io/name: relay, app.kubernetes.io/part-of: slimfony-demo }
+spec:
+  replicas: 2 # several relays are safe: they skip rows another relay is working on
+  selector:
+    matchLabels: { app.kubernetes.io/name: relay }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: relay, app.kubernetes.io/part-of: slimfony-demo }
+    spec:
+      terminationGracePeriodSeconds: 30
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: relay
+          image: slimfony-demo:0.2.0
+          command: ["php", "-d", "apc.enable_cli=1", "bin/relay"]
+          ports:
+            - { name: metrics, containerPort: 9100 }
+          envFrom:
+            - configMapRef: { name: demo-config }
+          env:
+            - { name: DB_PASSWORD_FILE, value: /secrets/db_password }
+            - { name: METRICS_TOKEN_FILE, value: /secrets/metrics_token }
+            - { name: MERCURE_KEY_FILE, value: /secrets/mercure_key }
+            - { name: SWEEP_AFTER_SECONDS, value: "120" } # longer than the importers' own timeouts
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          readinessProbe:
+            tcpSocket: { port: metrics }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { memory: 128Mi }
+          volumeMounts:
+            - { name: secrets, mountPath: /secrets, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: secrets
+          secret: { secretName: demo-secrets, defaultMode: 0440 }
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: importer
+  labels: { app.kubernetes.io/name: importer, app.kubernetes.io/part-of: slimfony-demo }
+spec:
+  replicas: 4 # they share the work through one JetStream consumer: add more to go faster
+  selector:
+    matchLabels: { app.kubernetes.io/name: importer }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: importer, app.kubernetes.io/part-of: slimfony-demo }
+    spec:
+      terminationGracePeriodSeconds: 60 # a batch in progress is finished before the pod ends (SIGTERM stops the loop after it)
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: importer
+          image: slimfony-demo:0.2.0
+          command: ["php", "-d", "apc.enable_cli=1", "bin/importer"]
+          ports:
+            - { name: metrics, containerPort: 9100 }
+          envFrom:
+            - configMapRef: { name: demo-config }
+          env:
+            - { name: DB_PASSWORD_FILE, value: /secrets/db_password }
+            - { name: METRICS_TOKEN_FILE, value: /secrets/metrics_token }
+            - { name: MERCURE_KEY_FILE, value: /secrets/mercure_key }
+            - { name: IMPORT_ACK_WAIT_SECONDS, value: "60" }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          readinessProbe:
+            tcpSocket: { port: metrics }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 250m, memory: 96Mi }
+            limits: { memory: 192Mi }
+          volumeMounts:
+            - { name: secrets, mountPath: /secrets, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: secrets
+          secret: { secretName: demo-secrets, defaultMode: 0440 }
+        - { name: tmp, emptyDir: {} }
+---
+# Importers are CPU-bound while there is work. (The best signal is the queue depth: with KEDA, scale on the
+# NATS consumer's pending messages instead.)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: importer
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: importer }
+  minReplicas: 2
+  maxReplicas: 16
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+  behavior:
+    scaleDown: { stabilizationWindowSeconds: 300 }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: importer
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: importer }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: relay
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: relay }
