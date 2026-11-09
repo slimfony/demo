@@ -110,6 +110,8 @@ Measured with k6 on one laptop-class machine (i5-14400, everything in Docker), s
 | `GET /api/batches/{id}` (verified token, database read) | about 12,400 requests per second with 16 PHP workers (6,500 with 4: workers that wait for the database are the limit, not the CPU) |
 | Import of 1,000 ZIPs (10,000 statements) | 14 s with eight importers, 78 s with one; rows are locked in a fixed order, so there is no deadlock and every importer added helps (before: 67 s with eight, because of the deadlocks) |
 
+**Is that good?** Yes, and for PHP very good. The same application on the same machine and server, started the classic way (a fresh boot for every request), saturates at about 1,300 requests per second and needs 3.6 ms per request; in worker mode it answers 15,000 and more at 0.5 ms. The import books about 700 statements per second with eight importers, each statement in its own transaction, checked against a schema and business rules. A bulk load would be faster, but it would give up the per-statement rollback that the import is about. It is one laptop-class machine, so read the ratios, not the absolute numbers.
+
 The benchmarks folder keeps every run, before and after each change.
 ## Start your own service from this repository
 
@@ -122,6 +124,8 @@ composer ci
 ```
 
 On GitHub, **Use this template** creates a repository with this content and none of its history. What is left to you: remove what you do not need (the import, the identity provider, the chaos switches, the page), and rename the services in `compose.yaml`, the `Dockerfile` and `k8s/`. Keep `tests/ArchitectureTest.php` and the CI: they hold the code to the rules of the core.
+
+> **A smaller starting point is planned:** `slimfony/starter-template`, a template repository without the demo's import, identity provider, chaos switches and page, with only the structure every service needs (the composition root, the compiled container, health checks and metrics, the Dockerfile, the compose file, the CI and the architecture test). Until it exists, start from this repository as described above.
 ## Development
 
 ```bash

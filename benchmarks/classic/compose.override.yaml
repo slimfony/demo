@@ -1,0 +1,11 @@
+# The same application started the classic way, for the comparison in benchmarks/README.md: no PHP worker, so the kernel
+# is built and thrown away on every request.
+#   docker compose -f compose.yaml -f benchmarks/classic/compose.override.yaml up -d --force-recreate --no-deps web
+#   RATES=250,500,1000,2000,4000 STEP_SECONDS=10 bash benchmarks/run-api.sh health benchmarks/results/classic
+services:
+  web:
+    volumes:
+      - ./benchmarks/classic/Caddyfile:/etc/frankenphp/Caddyfile:ro
+      - ./benchmarks/classic/index.php:/app/public/index.php:ro
+      - secrets:/secrets:ro
+      - idpdata:/idp-ca:ro

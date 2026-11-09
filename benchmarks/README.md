@@ -32,6 +32,7 @@ Machine: i5-14400 (16 CPUs and 8 GB given to Docker), everything on one host, k6
 | [2026-11-09-baseline](results/2026-11-09-baseline/README.md) | the defaults of v0.2.0: 4 PHP workers, the importers lock rows in the order the entries appear |
 | [2026-11-09-workers](results/2026-11-09-workers/) | the authenticated route with 4, 8, 16 and 32 PHP workers |
 | [2026-11-09-sorted](results/2026-11-09-sorted/README.md) | the importers lock rows in a fixed (sorted) order |
+| [2026-11-09-classic](results/2026-11-09-classic/README.md) | the same application without a worker (see [classic/](classic/compose.override.yaml)), for comparison |
 
 ### What the baseline showed, and what was done about it
 
@@ -59,7 +60,16 @@ More workers than 16 bring nothing here: the CPU (about 6.6 of the 16 cores) and
 
 **3. `GET /healthz` takes 15,000 requests per second** without an error or a dropped request (p95 7 ms); the time inside the application is a few hundred microseconds.
 
-**4. PgBouncer costs 5 to 10 percent** of the import throughput here (one more hop). It buys connection economy, which a single-machine run does not need.
+**4. Worker mode against the classic way.** The same application, on the same server and machine, started the classic way (no worker: the kernel is built and thrown away for every request), `GET /healthz`:
+
+| | Saturates at (requests/s) | Median time per request |
+| --- | ---: | ---: |
+| classic (a fresh boot per request) | about 1,300 | 3.6 ms |
+| worker mode | **15,000 or more** (no limit found) | 0.5 ms |
+
+More than ten times the throughput and about seven times less time per request: the saving is the boot, which worker mode pays once.
+
+**5. PgBouncer costs 5 to 10 percent** of the import throughput here (one more hop). It buys connection economy, which a single-machine run does not need.
 
 ## Read these numbers with care
 

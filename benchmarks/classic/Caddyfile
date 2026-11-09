@@ -1,0 +1,104 @@
+{
+	admin off
+	http_port 8080
+	https_port 8443
+	auto_https disable_redirects
+	# the container is non-root and has no trust store tools: do not try to install the local CA into one
+	skip_install_trust
+
+	servers {
+		timeouts {
+			read_header 5s
+			read_body 30s
+			write 60s
+			idle 2m
+		}
+		max_header_size 16KB
+	}
+
+	# Warnings and errors only: an access line per request would drown the log at thousands of requests per second.
+	# The application writes its own structured JSON log (request id, route, outcome).
+	log {
+		output stdout
+		format json
+		level WARN
+	}
+
+	frankenphp {
+		# PHP threads and how many of them run the worker script; a worker that waits for the database is idle, so there can be more of them than cores
+		num_threads {$PHP_THREADS:18}
+	}
+}
+
+(hardening) {
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy same-origin
+	}
+}
+
+(app) {
+	encode zstd gzip
+	import hardening
+	log
+
+	# the api: the PHP worker answers
+	@upload path /api/imports /public/drop
+	handle @upload {
+		request_body {
+			max_size 1MB
+		}
+		root * /app/public
+		php_server
+	}
+
+	@backend path /api/* /public/* /healthz /readyz /metrics
+	handle @backend {
+		request_body {
+			max_size 64KB
+		}
+		root * /app/public
+		php_server
+	}
+
+	# everything else is the static page
+	handle {
+		root * /app/ui
+		header Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		header Cache-Control "no-cache"
+		@assets path /css/* /js/* /vendor/* /fonts/*
+		header @assets Cache-Control "public, max-age=300"
+		file_server
+	}
+}
+
+# plain HTTP for a quick local look. The one Mercure hub lives here: live events for the page. Only the services that hold
+# the key can publish; anybody may subscribe (what it carries is what the demo shows on the page anyway).
+:8080 {
+	@events path /.well-known/mercure
+	handle @events {
+		mercure {
+			publisher_jwt {file./secrets/mercure_key}
+			anonymous
+			transport local
+			protocol_version_compatibility 8 # the key is a shared secret; the newer mode wants a JWKS issuer
+		}
+	}
+	import app
+}
+
+# HTTPS with a locally trusted certificate (use a real domain and Caddy gets a public certificate on its own)
+localhost:8443 {
+	tls internal
+	header Strict-Transport-Security "max-age=31536000"
+	# the same hub, seen through HTTPS
+	handle /.well-known/mercure {
+		reverse_proxy 127.0.0.1:8080 {
+			flush_interval -1
+		}
+	}
+	import app
+}
