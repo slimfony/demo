@@ -189,6 +189,7 @@ services:
       MERCURE_KEY_FILE: /secrets/mercure_key
       CHAOS_ENABLED: "true" # an importer can be killed on request (demo only)
       IMPORT_ACK_WAIT_SECONDS: "15" # short, so a killed importer's batch is taken again within a minute
+      IMPORT_PULL_BATCH: "${BENCH_PULL_BATCH:-5}" # messages per pull request: one message per pull costs about 40 ms of waiting each
     volumes:
       - secrets:/secrets:ro
     read_only: true

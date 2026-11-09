@@ -77,7 +77,7 @@ final class ImporterKernelFactory
             ->setAckPolicy(AckPolicy::EXPLICIT)
             ->setAckWait($ackWait * 1_000_000_000)
             ->setMaxDeliver(ImporterWorker::MAX_DELIVER);
-        $consumer->setBatching(1)->setIterations(1)->setExpires(0.5)->setDelay(0.0); // one message per turn, then back to the loop (and Prometheus)
+        $consumer->setBatching($this->env->int('IMPORT_PULL_BATCH', 5))->setIterations(1)->setExpires(0.5)->setDelay(0.0); // a few messages per pull request (every pull costs about 40 ms of waiting), then back to the loop (and Prometheus)
         $consumer->create();
 
         $endpoint = new ProcessMetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));

@@ -32,6 +32,7 @@ Machine: i5-14400 (16 CPUs and 8 GB given to Docker), everything on one host, k6
 | [2026-11-09-baseline](results/2026-11-09-baseline/README.md) | the defaults of v0.2.0: 4 PHP workers, the importers lock rows in the order the entries appear |
 | [2026-11-09-workers](results/2026-11-09-workers/) | the authenticated route with 4, 8, 16 and 32 PHP workers |
 | [2026-11-09-sorted](results/2026-11-09-sorted/README.md) | the importers lock rows in a fixed (sorted) order |
+| [2026-11-09-pull-batch](results/2026-11-09-pull-batch/README.md) | messages per NATS pull request: one importer 31.7 s to 15.8 s for 400 ZIPs |
 | [2026-11-09-classic](results/2026-11-09-classic/README.md) | the same application without a worker (see [classic/](classic/compose.override.yaml)), for comparison |
 
 ### What the baseline showed, and what was done about it
