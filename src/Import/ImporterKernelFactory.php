@@ -16,7 +16,6 @@ use Demo\Events\NullEventPublisher;
 use Demo\Infrastructure\Mercure\MercurePublisher;
 use Demo\Infrastructure\Mercure\TeeLogger;
 use Demo\Infrastructure\Nats\StreamProvisioner;
-use Demo\Relay\MetricsEndpoint;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Config\Env;
@@ -30,6 +29,7 @@ use Slimfony\Core\Log\RequestContext;
 use Slimfony\Core\Observability\ApcuStorage;
 use Slimfony\Core\Observability\MetricsController;
 use Slimfony\Core\Observability\MetricsRegistry;
+use Slimfony\Core\Observability\ProcessMetricsEndpoint;
 
 /** The composition root of an importer: a command line process, any number of which can run side by side. */
 final class ImporterKernelFactory
@@ -78,7 +78,7 @@ final class ImporterKernelFactory
         $consumer->setBatching(1)->setIterations(1)->setExpires(0.5)->setDelay(0.0); // one message per turn, then back to the loop (and Prometheus)
         $consumer->create();
 
-        $endpoint = new MetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
+        $endpoint = new ProcessMetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
         $importerWorker = new ImporterWorker(
             $consumer,
             $importer,

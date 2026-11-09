@@ -17,4 +17,7 @@ $kernel = new ApiKernelFactory($env, dirname(__DIR__))->create();
 $logger = $kernel->get(LoggerInterface::class);
 assert($logger instanceof LoggerInterface);
 
+// the runtime reports it (/api/runtime): the classic entry script of the benchmarks does not define it
+define('DEMO_WORKER_LOOP', true);
+
 new WorkerRunner($kernel, $logger, maxRequests: $env->int('MAX_REQUESTS', 0))->run();

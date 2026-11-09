@@ -4,6 +4,14 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-09
+
+### Changed
+- Uses slimfony/core 0.4.0: its `ProcessMetricsEndpoint` replaces the demo's own copy.
+
+### Fixed
+- `/api/runtime` reported `worker_mode: true` in classic mode too (the function `frankenphp_handle_request()` exists there). The worker script now says it runs the worker loop; the classic entry script of the benchmarks does not.
+
 ## [0.3.0] - 2026-11-09
 
 ### Changed

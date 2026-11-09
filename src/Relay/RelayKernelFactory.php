@@ -26,6 +26,7 @@ use Slimfony\Core\Log\RequestContext;
 use Slimfony\Core\Observability\ApcuStorage;
 use Slimfony\Core\Observability\MetricsController;
 use Slimfony\Core\Observability\MetricsRegistry;
+use Slimfony\Core\Observability\ProcessMetricsEndpoint;
 
 /** The composition root of the outbox relay, a command line process that uses the same core kernel as the api. */
 final class RelayKernelFactory
@@ -53,7 +54,7 @@ final class RelayKernelFactory
             throw new ConfigurationException('The relay keeps its metrics in APCu: start PHP with -d apc.enable_cli=1.');
         }
         $metrics = new MetricsRegistry(new ApcuStorage());
-        $endpoint = new MetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
+        $endpoint = new ProcessMetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
         $worker = new RelayWorker(
             $relay,
             new StaleBatchSweeper($retry, $this->env->int('SWEEP_AFTER_SECONDS', 120)),

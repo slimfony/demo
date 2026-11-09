@@ -9,6 +9,7 @@ use Demo\Outbox\StaleBatchSweeper;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Observability\Counter;
 use Slimfony\Core\Observability\Gauge;
+use Slimfony\Core\Observability\ProcessMetricsEndpoint;
 
 /**
  * One turn of the relay's loop: publish a batch, count it, now and then announce the batches that have been forgotten,
@@ -25,7 +26,7 @@ final class RelayWorker
     public function __construct(
         private readonly OutboxRelay $relay,
         private readonly StaleBatchSweeper $sweeper,
-        private readonly MetricsEndpoint $endpoint,
+        private readonly ProcessMetricsEndpoint $endpoint,
         private readonly LoggerInterface $logger,
         private readonly Counter $published,
         private readonly Counter $swept,

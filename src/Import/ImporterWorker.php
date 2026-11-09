@@ -7,10 +7,10 @@ namespace Demo\Import;
 use Basis\Nats\Consumer\Consumer;
 use Basis\Nats\Message\Payload;
 use Demo\Events\EventPublisher;
-use Demo\Relay\MetricsEndpoint;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Observability\Counter;
 use Slimfony\Core\Observability\Histogram;
+use Slimfony\Core\Observability\ProcessMetricsEndpoint;
 
 /**
  * One turn of an importer's loop: ask the stream for a batch, import it, count and announce the result, answer Prometheus.
@@ -21,7 +21,7 @@ final class ImporterWorker
     public function __construct(
         private readonly Consumer $consumer,
         private readonly BatchImporter $importer,
-        private readonly MetricsEndpoint $endpoint,
+        private readonly ProcessMetricsEndpoint $endpoint,
         private readonly EventPublisher $events,
         private readonly LoggerInterface $logger,
         private readonly string $worker,
