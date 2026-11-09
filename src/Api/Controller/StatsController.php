@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 final class StatsController
 {
     private const string REQUESTS_PER_SECOND = 'sum(rate(http_requests_total[10s]))';
-    private const string P95_SECONDS = 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[10s])))';
+    private const string P99_SECONDS = 'histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[10s])))';
     private const string REQUESTS_TOTAL = 'sum(http_requests_total)';
     private const string GC_RUNS_TOTAL = 'sum(php_gc_runs_total) or vector(0)'; // a counter has no series before its first increment
     private const string GC_CYCLES_PER_SECOND = 'sum(rate(php_gc_collected_total[10s])) or vector(0)';
@@ -34,10 +34,10 @@ final class StatsController
             return new JsonResponse($cached);
         }
 
-        $p95 = $this->prometheus->value(self::P95_SECONDS);
+        $p99 = $this->prometheus->value(self::P99_SECONDS);
         $stats = [
             'requests_per_second' => $this->prometheus->value(self::REQUESTS_PER_SECOND),
-            'p95_microseconds' => null === $p95 ? null : round($p95 * 1_000_000, 1),
+            'p99_microseconds' => null === $p99 ? null : round($p99 * 1_000_000, 1),
             'requests_total' => $this->prometheus->value(self::REQUESTS_TOTAL),
             'gc_runs_total' => $this->prometheus->value(self::GC_RUNS_TOTAL),
             'gc_cycles_per_second' => $this->prometheus->value(self::GC_CYCLES_PER_SECOND),

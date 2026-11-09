@@ -90,7 +90,7 @@ The containers run as a non-root user, with a read-only file system, no capabili
 | `GET /metrics` | Prometheus metrics, bearer token required |
 | `GET /api/runtime` | PHP, JIT, server and core versions, uptime, memory |
 | `GET /api/status` | state of every dependency |
-| `GET /api/stats` | requests per second, p95 and total, read from Prometheus |
+| `GET /api/stats` | requests per second, p99 and total, read from Prometheus |
 | `GET /api/sample.zip?seed=&files=&fault_rate=&fault=` | a ZIP of generated CAMT.053 statements (the same seed gives the same ZIP; some can be made wrong on purpose) |
 | `GET /api/batches`, `GET /api/import/summary` | the latest batches, and what the importers have done so far (public) |
 | `POST /api/demo-rotate` | the identity provider starts signing with a new key |

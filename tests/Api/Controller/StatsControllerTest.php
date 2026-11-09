@@ -28,7 +28,7 @@ final class StatsControllerTest extends TestCase
     {
         $prometheus = new FakePrometheus([
             'sum(rate(http_requests_total[10s]))' => 8421.5,
-            'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[10s])))' => 0.0000234,
+            'histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[10s])))' => 0.0000234,
             'sum(http_requests_total)' => 120000.0,
             'sum(php_gc_runs_total) or vector(0)' => 42.0,
             'sum(rate(php_gc_collected_total[10s])) or vector(0)' => 310.5,
@@ -43,7 +43,7 @@ final class StatsControllerTest extends TestCase
 
         self::assertIsArray($first);
         self::assertSame(8421.5, $first['requests_per_second']);
-        self::assertSame(23.4, $first['p95_microseconds'], 'seconds are shown as microseconds');
+        self::assertSame(23.4, $first['p99_microseconds'], 'seconds are shown as microseconds');
         self::assertEquals(120000, $first['requests_total']); // JSON has one number type
         self::assertEquals(42, $first['gc_runs_total']);
         self::assertSame(310.5, $first['gc_cycles_per_second']);
@@ -59,7 +59,7 @@ final class StatsControllerTest extends TestCase
 
         self::assertIsArray($body);
         self::assertNull($body['requests_per_second']);
-        self::assertNull($body['p95_microseconds']);
+        self::assertNull($body['p99_microseconds']);
         self::assertNull($body['busy_workers']);
     }
 }

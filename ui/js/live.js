@@ -97,9 +97,9 @@ function dualChart(element) {
 
 export function startLive() {
   const rpsChart = chart(document.getElementById('chart-rps'), '--accent', (v) => formatInteger(v));
-  const p95Chart = chart(document.getElementById('chart-p95'), '--accent', (v) => formatInteger(v));
+  const p99Chart = chart(document.getElementById('chart-p99'), '--accent', (v) => formatInteger(v));
   const rps = document.getElementById('kpi-rps');
-  const p95 = document.getElementById('kpi-p95');
+  const p99 = document.getElementById('kpi-p99');
   const total = document.getElementById('kpi-total');
 
   const sps = chart(document.getElementById('chart-sps'), '--accent', (v) => formatInteger(v));
@@ -137,9 +137,9 @@ export function startLive() {
         animateNumber(rps, stats.requests_per_second, formatInteger);
         rpsChart.push(stats.at, stats.requests_per_second);
       }
-      if (stats.p95_microseconds !== null) {
-        animateNumber(p95, stats.p95_microseconds, formatMicroseconds);
-        p95Chart.push(stats.at, stats.p95_microseconds);
+      if (stats.p99_microseconds !== null) {
+        animateNumber(p99, stats.p99_microseconds, formatMicroseconds);
+        p99Chart.push(stats.at, stats.p99_microseconds);
       }
       if (stats.requests_total !== null) {
         animateNumber(total, stats.requests_total, formatInteger);
