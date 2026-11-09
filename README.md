@@ -105,7 +105,7 @@ bash scripts/chaos.sh  # on a running stack: kill importers, cut connections, lo
 
 ## Status
 
-Version 0.1.0 (see [CHANGELOG.md](CHANGELOG.md)), pre-1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay, the importers (`partial` and `strict` mode, deadlock retries) and the page with the live import view work, and are exercised by the tests and by `scripts/e2e.sh` in CI.
+Version 0.2.0 (see [CHANGELOG.md](CHANGELOG.md)), pre-1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay, the importers (`partial` and `strict` mode, deadlock retries) and the page with the live import view work, and are exercised by the tests and by `scripts/e2e.sh` in CI.
 
 The numbers the page shows come from a laptop running everything in Docker, with the browser as the load generator. They show that the pieces work together; they are not a benchmark.
 
