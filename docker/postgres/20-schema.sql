@@ -5,6 +5,7 @@ CREATE TABLE batches (
     mode        text        NOT NULL CHECK (mode IN ('partial', 'strict')),
     status      text        NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'running', 'done', 'failed')),
     source      text        NOT NULL CHECK (source IN ('jwt', 'public')),
+    lock_order  text        NOT NULL DEFAULT 'sorted' CHECK (lock_order IN ('sorted', 'appearance')),
     subject     text,
     token_kid   text,
     size_bytes  integer     NOT NULL,

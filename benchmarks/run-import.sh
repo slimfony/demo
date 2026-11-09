@@ -32,8 +32,8 @@ work=$(pwd -W 2>/dev/null || pwd)
 base=$(( ($(date +%s) % 800000) * 1000 + 1 ))
 
 MSYS_NO_PATHCONV=1 docker run --rm --network "$network" -v "$work/benchmarks:/work" -w /work \
-  -e TARGET=http://web:8080 -e ZIPS="$zips" -e VUS="${VUS:-24}" -e SEED_BASE="$base" \
-  grafana/k6:latest run --quiet --summary-export="/work/results/$(basename "$out")/import-$importers-$pool-k6.json" k6/import.js >/dev/null
+  -e TARGET=http://web:8080 -e ZIPS="$zips" -e VUS="${VUS:-24}" -e SEED_BASE="$base" -e LOCK_ORDER="${LOCK_ORDER:-sorted}" \
+  grafana/k6:latest run --quiet --summary-export="/work/${out#benchmarks/}/import-$importers-$pool-${LOCK_ORDER:-sorted}-k6.json" k6/import.js >/dev/null
 
 for _ in $(seq 1 600); do
   open=$(sql "SELECT count(*) FROM batches WHERE status IN ('queued', 'running')")
@@ -46,5 +46,5 @@ retries=$(docker compose exec -T prometheus wget -qO- 'http://127.0.0.1:9090/api
 row=$(sql "SELECT count(*), count(*) FILTER (WHERE status = 'done'), count(*) FILTER (WHERE status = 'failed'), coalesce(sum(statements_ok), 0), coalesce(sum(statements_failed), 0), coalesce(sum(entries_booked), 0), round(extract(epoch from (max(finished_at) - min(created_at)))::numeric, 2) FROM batches")
 IFS='|' read -r total done_count failed_count booked rejected entries seconds <<<"$row"
 
-printf '{"importers":%s,"pooler":"%s","zips":%s,"batches":%s,"done":%s,"failed":%s,"statements_booked":%s,"statements_rejected":%s,"entries":%s,"seconds":%s,"deadlock_retries":%s,"still_open":%s}\n' \
-  "$importers" "$pool" "$zips" "$total" "$done_count" "$failed_count" "$booked" "$rejected" "$entries" "${seconds:-0}" "${retries:-0}" "${open:-0}" | tee -a "$out/import.jsonl"
+printf '{"lock_order":"%s","importers":%s,"pooler":"%s","zips":%s,"batches":%s,"done":%s,"failed":%s,"statements_booked":%s,"statements_rejected":%s,"entries":%s,"seconds":%s,"deadlock_retries":%s,"still_open":%s}\n' \
+  "${LOCK_ORDER:-sorted}" "$importers" "$pool" "$zips" "$total" "$done_count" "$failed_count" "$booked" "$rejected" "$entries" "${seconds:-0}" "${retries:-0}" "${open:-0}" | tee -a "$out/import.jsonl"

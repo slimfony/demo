@@ -8,6 +8,7 @@ import { check } from 'k6';
 const TARGET = __ENV.TARGET || 'http://web:8080';
 const ZIPS = Number(__ENV.ZIPS || 1000);
 const VUS = Number(__ENV.VUS || 24);
+const LOCK_ORDER = __ENV.LOCK_ORDER || 'sorted';
 const SEED_BASE = Number(__ENV.SEED_BASE || 1); // every statement id contains the seed: a seed must not be used twice
 
 export const options = {
@@ -28,7 +29,7 @@ export function setup() {
 export default function (data) {
   const seed = SEED_BASE + exec.scenario.iterationInTest;
   const sample = http.get(`${TARGET}/api/sample.zip?files=10&seed=${seed}&fault_rate=0.03`, { responseType: 'binary', tags: { name: 'sample' } });
-  const upload = http.post(`${TARGET}/api/imports`, sample.body, {
+  const upload = http.post(`${TARGET}/api/imports?lock_order=${LOCK_ORDER}`, sample.body, {
     headers: { Authorization: `Bearer ${data.token}`, 'Content-Type': 'application/zip' },
     tags: { name: 'upload' },
   });

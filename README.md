@@ -102,10 +102,10 @@ Measured with k6 on one laptop-class machine (i5-14400, everything in Docker), s
 | What | Result |
 | --- | --- |
 | `GET /healthz` | 15,000 requests per second without an error or a dropped request (p95 7 ms) |
-| `GET /api/batches/{id}` (verified token, database read) | saturates at about 6,300 requests per second; the limit is the number of PHP workers waiting for the database, not the CPU |
-| Import of 1,000 ZIPs (10,000 statements) | 83 s with one importer, 35 s with four; with eight importers the deadlocks on the shared account rows make it slower again (70 s) |
+| `GET /api/batches/{id}` (verified token, database read) | about 12,400 requests per second with 16 PHP workers (6,500 with 4: workers that wait for the database are the limit, not the CPU) |
+| Import of 1,000 ZIPs (10,000 statements) | 14 s with eight importers, 78 s with one; rows are locked in a fixed order, so there is no deadlock and every importer added helps (before: 67 s with eight, because of the deadlocks) |
 
-These are the numbers before any tuning; the benchmarks folder keeps every run, so a change can be shown against them.
+The benchmarks folder keeps every run, before and after each change.
 ## Development
 
 ```bash

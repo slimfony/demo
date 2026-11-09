@@ -18,6 +18,7 @@ use Demo\Imports\ArchiveLimits;
 use Demo\Imports\BatchRepository;
 use Demo\Imports\ImportMode;
 use Demo\Imports\ImportSource;
+use Demo\Imports\LockOrder;
 use Demo\Imports\RejectedUpload;
 use Demo\Tests\Support\PostgresTestCase;
 use Slimfony\Core\Database\Retry;
@@ -47,11 +48,11 @@ final class BatchImporterTest extends PostgresTestCase
      *
      * @param array<string, string> $files
      */
-    private function queue(array $files, ImportMode $mode = ImportMode::Partial, ImportSource $source = ImportSource::Jwt): string
+    private function queue(array $files, ImportMode $mode = ImportMode::Partial, ImportSource $source = ImportSource::Jwt, LockOrder $order = LockOrder::Sorted): string
     {
         $bytes = $this->generator->zip($files);
         $id = '6f9619ff-8b86-4d11-b42d-' . str_pad((string) random_int(1, 999_999_999_999), 12, '0', \STR_PAD_LEFT);
-        new BatchRepository()->insertAccepted($this->connection, $id, new Archive($bytes, hash('sha256', $bytes), \count($files)), $mode, $source, 'tester', 'k1');
+        new BatchRepository()->insertAccepted($this->connection, $id, new Archive($bytes, hash('sha256', $bytes), \count($files)), $mode, $source, 'tester', 'k1', $order);
 
         return $id;
     }
@@ -200,5 +201,20 @@ final class BatchImporterTest extends PostgresTestCase
         } catch (RejectedUpload $e) {
             self::assertSame('too_much_data', $e->reason);
         }
+    }
+    public function testBothLockOrdersBookExactlyTheSame(): void
+    {
+        $files = $this->generator->files(1, 10);
+        $sorted = $this->importer->import($this->queue($files, order: LockOrder::Sorted), 'w1');
+        $after = [$this->rows('statements'), $this->rows('entries'), $this->balanceOf(1), $this->connection->fetchOne('SELECT sum(entries_total) FROM account_stats')];
+
+        $this->connection->executeStatement('TRUNCATE batches, outbox CASCADE');
+        $this->connection->executeStatement("UPDATE accounts SET booked_balance = 100000.00; UPDATE account_stats SET entries_total = 0, last_booking_date = NULL");
+        $appearance = $this->importer->import($this->queue($files, order: LockOrder::Appearance), 'w1');
+
+        self::assertNotNull($sorted);
+        self::assertNotNull($appearance);
+        self::assertSame([$sorted->statementsOk, $sorted->entries], [$appearance->statementsOk, $appearance->entries]);
+        self::assertSame($after, [$this->rows('statements'), $this->rows('entries'), $this->balanceOf(1), $this->connection->fetchOne('SELECT sum(entries_total) FROM account_stats')], 'the same statements, the same balances, the same statistics');
     }
 }

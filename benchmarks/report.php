@@ -49,7 +49,7 @@ if ([] !== $lines) {
     foreach ($lines as $line) {
         $r = json_decode($line, true);
         if (is_array($r)) {
-            $groups[$r['pooler'] . '-' . str_pad((string) $r['importers'], 3, '0', STR_PAD_LEFT)][] = $r;
+            $groups[($r['lock_order'] ?? 'appearance') . '-' . $r['pooler'] . '-' . str_pad((string) $r['importers'], 3, '0', STR_PAD_LEFT)][] = $r;
         }
     }
     ksort($groups);
@@ -60,14 +60,15 @@ if ([] !== $lines) {
         return $n % 2 ? (float) $values[intdiv($n, 2)] : ((float) $values[$n / 2 - 1] + (float) $values[$n / 2]) / 2;
     };
 
-    echo "### Import lane: ZIPs of 10 statements, from the first upload to the last booked statement\n\nEvery configuration was run several times; the figures are the median of the runs, with the fastest and the slowest run next to it.\n\n| Importers | PgBouncer | Runs | ZIPs | Seconds (median, fastest-slowest) | ZIPs/s | Statements/s | Deadlock retries | Not finished |\n|---:|:---:|---:|---:|---:|---:|---:|---:|---:|\n";
+    echo "### Import lane: ZIPs of 10 statements, from the first upload to the last booked statement\n\nEvery configuration was run several times; the figures are the median of the runs, with the fastest and the slowest run next to it.\n\n| Lock order | Importers | PgBouncer | Runs | ZIPs | Seconds (median, fastest-slowest) | ZIPs/s | Statements/s | Deadlock retries | Not finished |\n|:---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|\n";
     foreach ($groups as $runs) {
         $seconds = array_map(static fn(array $r): float => max(0.001, (float) $r['seconds']), $runs);
         $m = $median($seconds);
         $first = $runs[0];
         $statements = $median(array_map(static fn(array $r): float => ($r['statements_booked'] + $r['statements_rejected']) / max(0.001, (float) $r['seconds']), $runs));
         printf(
-            "| %d | %s | %d | %d | %.1f (%.1f-%.1f) | %.1f | %.0f | %.0f | %d |\n",
+            "| %s | %d | %s | %d | %d | %.1f (%.1f-%.1f) | %.1f | %.0f | %.0f | %d |\n",
+            $first['lock_order'] ?? 'appearance',
             $first['importers'],
             'on' === $first['pooler'] ? 'yes' : 'no',
             count($runs),

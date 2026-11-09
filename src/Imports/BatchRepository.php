@@ -15,16 +15,16 @@ final class BatchRepository
 {
     public const string ACCEPTED_TOPIC = 'imports.accepted';
 
-    public function insertAccepted(Connection $connection, string $id, Archive $archive, ImportMode $mode, ImportSource $source, ?string $subject, ?string $keyId): void
+    public function insertAccepted(Connection $connection, string $id, Archive $archive, ImportMode $mode, ImportSource $source, ?string $subject, ?string $keyId, LockOrder $lockOrder = LockOrder::Sorted): void
     {
         // A bytea column takes its value in PostgreSQL's hex format: a plain string parameter that works the same with or
         // without server-side prepared statements (PgBouncer's transaction pooling has none).
         $payload = '\x' . bin2hex($archive->bytes);
 
         $connection->executeStatement(
-            'INSERT INTO batches (id, sha256, mode, source, subject, token_kid, size_bytes, entries, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [$id, $archive->sha256, $mode->value, $source->value, $subject, $keyId, \strlen($archive->bytes), $archive->files, $payload],
-            [ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::STRING],
+            'INSERT INTO batches (id, sha256, mode, source, subject, token_kid, size_bytes, entries, payload, lock_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$id, $archive->sha256, $mode->value, $source->value, $subject, $keyId, \strlen($archive->bytes), $archive->files, $payload, $lockOrder->value],
+            [ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING],
         );
         $connection->executeStatement(
             'INSERT INTO outbox (topic, payload) VALUES (?, ?)',

@@ -8,6 +8,7 @@ use Demo\Imports\ArchiveInspector;
 use Demo\Imports\BatchRepository;
 use Demo\Imports\ImportMode;
 use Demo\Imports\ImportSource;
+use Demo\Imports\LockOrder;
 use Demo\Imports\RateLimiter;
 use Demo\Imports\RejectedUpload;
 use Doctrine\DBAL\Connection;
@@ -52,6 +53,10 @@ final class UploadController
         if (null === $mode) {
             return new ProblemResponse(400, $requestId, 'The mode must be "partial" or "strict".');
         }
+        $lockOrder = LockOrder::tryFrom($request->query->getString('lock_order', LockOrder::Sorted->value));
+        if (null === $lockOrder) {
+            return new ProblemResponse(400, $requestId, 'The lock order must be "sorted" or "appearance".');
+        }
 
         // the anonymous sandbox is rationed per client; a caller with a verified token is not
         $wait = ImportSource::Public === $source ? $this->sandboxLimit->retryAfter($request->getClientIp() ?? 'unknown') : null;
@@ -77,8 +82,8 @@ final class UploadController
         }
 
         $id = $this->uuid();
-        $this->retry->transactional(function (Connection $connection) use ($id, $archive, $mode, $source, $subject, $keyId): void {
-            $this->batches->insertAccepted($connection, $id, $archive, $mode, $source, $subject, $keyId);
+        $this->retry->transactional(function (Connection $connection) use ($id, $archive, $mode, $source, $subject, $keyId, $lockOrder): void {
+            $this->batches->insertAccepted($connection, $id, $archive, $mode, $source, $subject, $keyId, $lockOrder);
         });
         $this->accepted->inc([$source->value]);
 

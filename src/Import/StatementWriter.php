@@ -7,6 +7,7 @@ namespace Demo\Import;
 use Demo\Camt\Money;
 use Demo\Camt\Statement;
 use Demo\Camt\StatementRejected;
+use Demo\Imports\LockOrder;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -15,52 +16,63 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
  * Writes one statement: its header, its entries, the account's balance and the statistics of the accounts it names.
  * The caller owns the transaction, so the statement is booked completely or not at all.
  *
- * The statistics rows are updated in the order the entries appear. Two importers that book statements naming the same
- * accounts in different orders wait for each other's rows, and the database ends one of them with a deadlock:
- * `Retry::transactional()` runs that statement again. Sorting the accounts first would avoid this; it is left out on purpose,
- * because the deadlock and the retry are part of what the demo shows.
+ * Every statement updates the rows of a few shared accounts, so importers meet on the same rows. How they meet is the
+ * lock order:
+ *
+ * - `LockOrder::Sorted` (the default): the rows are locked first, all of them, sorted by IBAN. Transactions that lock the
+ *   same rows in the same order wait for each other but never deadlock. The statistics are then updated in one statement.
+ * - `LockOrder::Appearance`: the statistics rows are updated one entry at a time, in the order the entries appear. Two
+ *   importers that book statements naming the same accounts in different orders wait for each other's rows, and the
+ *   database ends one of them with a deadlock; `Retry::transactional()` runs it again. It is slower, and it is what makes
+ *   the deadlock and the retry visible, so the page offers it as a choice.
  */
 final class StatementWriter
 {
     private const int ENTRIES_PER_INSERT = 100;
 
     /**
-     * Locks every account row the statements will touch, in one fixed order (sorted by IBAN), before any of them is written.
-     * Two transactions that lock the same rows in the same order wait for each other but never deadlock. The strict mode needs
-     * this: its transaction holds the rows of a whole ZIP, so without a fixed order nearly every pair of ZIPs would deadlock.
-     * The partial mode does not do it, on purpose (see above), so that the deadlocks and the retries are visible.
+     * Locks every row the statements will touch, in one fixed order (accounts first, then statistics, each sorted by IBAN),
+     * before any of them is written. The strict mode calls it once for the whole ZIP.
      *
      * @param list<Statement> $statements
      */
     public function lockInOrder(Connection $connection, array $statements): void
     {
-        $ibans = [];
+        $accounts = [];
+        $statistics = [];
         foreach ($statements as $statement) {
-            $ibans[$statement->iban] = true;
+            $accounts[$statement->iban] = true;
+            $statistics[$statement->iban] = true;
             foreach ($statement->entries as $entry) {
                 if (null !== $entry->counterparty) {
-                    $ibans[$entry->counterparty] = true;
+                    $statistics[$entry->counterparty] = true;
                 }
             }
         }
-        if ([] === $ibans) {
-            return;
-        }
-        $ibans = array_map(strval(...), array_keys($ibans));
-        sort($ibans);
 
-        foreach (['accounts', 'account_stats'] as $table) { // the same order of tables everywhere, too
-            $connection->executeQuery("SELECT 1 FROM $table WHERE iban IN (?) ORDER BY iban FOR UPDATE", [$ibans], [ArrayParameterType::STRING])->fetchAllAssociative();
+        foreach (['accounts' => $accounts, 'account_stats' => $statistics] as $table => $ibans) { // the same order of tables everywhere, too
+            if ([] === $ibans) {
+                continue;
+            }
+            $sorted = array_map(strval(...), array_keys($ibans));
+            sort($sorted);
+            $connection->executeQuery("SELECT 1 FROM $table WHERE iban IN (?) ORDER BY iban FOR UPDATE", [$sorted], [ArrayParameterType::STRING])->fetchAllAssociative();
         }
     }
 
     /**
+     * @param bool $locked the caller has locked the rows already (the strict mode does it for the whole ZIP)
+     *
      * @return int the number of entries booked
      *
      * @throws StatementRejected for the rules that need the database: unknown account, currency, duplicate statement
      */
-    public function write(Connection $connection, Statement $statement, string $batchId): int
+    public function write(Connection $connection, Statement $statement, string $batchId, LockOrder $order = LockOrder::Sorted, bool $locked = false): int
     {
+        if (LockOrder::Sorted === $order && !$locked) {
+            $this->lockInOrder($connection, [$statement]);
+        }
+
         $accountCurrency = $connection->fetchOne('SELECT currency FROM accounts WHERE iban = ? FOR UPDATE', [$statement->iban]);
         if (false === $accountCurrency) {
             throw new StatementRejected(StatementRejected::UNKNOWN_ACCOUNT, $statement->file, 'The account is not one of ours.', $statement->id);
@@ -92,13 +104,44 @@ final class StatementWriter
             'UPDATE accounts SET booked_balance = booked_balance + ?, last_statement_at = now() WHERE iban = ?',
             [Money::format($statement->entriesCents()), $statement->iban],
         );
+        LockOrder::Sorted === $order ? $this->updateStatisticsTogether($connection, $statement) : $this->updateStatisticsOneByOne($connection, $statement);
+
+        return \count($statement->entries);
+    }
+
+    /** The rows are locked already (in order): one statement updates them all, one count per account. */
+    private function updateStatisticsTogether(Connection $connection, Statement $statement): void
+    {
+        $perAccount = [];
+        foreach ($statement->entries as $entry) {
+            $iban = $entry->counterparty ?? $statement->iban;
+            $perAccount[$iban] = [($perAccount[$iban][0] ?? 0) + 1, max($perAccount[$iban][1] ?? '', $entry->bookingDate)];
+        }
+        if ([] === $perAccount) {
+            return;
+        }
+
+        $values = [];
+        $parameters = [];
+        foreach ($perAccount as $iban => [$count, $date]) {
+            $values[] = '(?::text, ?::int, ?::date)';
+            array_push($parameters, $iban, $count, $date);
+        }
+        $connection->executeStatement(
+            'UPDATE account_stats s SET entries_total = s.entries_total + v.n, last_booking_date = GREATEST(s.last_booking_date, v.d)
+             FROM (VALUES ' . implode(', ', $values) . ') AS v(iban, n, d) WHERE s.iban = v.iban',
+            $parameters,
+        );
+    }
+
+    /** One update per entry, in the order the entries appear: rows are locked as they are reached, in whatever order that is. */
+    private function updateStatisticsOneByOne(Connection $connection, Statement $statement): void
+    {
         foreach ($statement->entries as $entry) {
             $connection->executeStatement(
                 'UPDATE account_stats SET entries_total = entries_total + 1, last_booking_date = GREATEST(last_booking_date, ?::date) WHERE iban = ?',
                 [$entry->bookingDate, $entry->counterparty ?? $statement->iban],
             );
         }
-
-        return \count($statement->entries);
     }
 }

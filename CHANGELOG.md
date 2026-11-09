@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+- **The importers lock the shared account rows in a fixed order** (sorted by IBAN) and update the statistics in one statement. No more deadlocks between importers, and 1,000 ZIPs take 14 s with eight importers instead of 67 s. The old behaviour is a choice (`lock_order=appearance`, a selector on the page).
+- **16 PHP workers by default** (`PHP_WORKERS`, `PHP_THREADS`): workers that wait for the database are idle, so there should be more of them than cores. The authenticated read now saturates at about 12,400 requests per second instead of 6,500.
+
+### Added
+- **Benchmarks** (`benchmarks/`): k6 scripts for the API and the import lane, runners, a report generator and the first results, with the machine described.
+- **Kubernetes manifests** (`k8s/`): probes, security context, autoscaling, disruption budgets, network policies.
+- `scripts/rename.php`: gives the code your own namespace and package name, to start a service from this repository.
+- `DB_TRANSACTION_POOLING` (and the matching compose variables) to run without PgBouncer, for the benchmark.
+
 ## [0.2.0] - 2026-11-09
 
 ### Added

@@ -12,6 +12,7 @@ use Demo\Chaos\Chaos;
 use Demo\Chaos\NoChaos;
 use Demo\Imports\ImportMode;
 use Demo\Imports\ImportSource;
+use Demo\Imports\LockOrder;
 use Demo\Imports\RejectedUpload;
 use Doctrine\DBAL\Connection;
 use Slimfony\Core\Database\Retry;
@@ -68,12 +69,13 @@ final class BatchImporter
     }
 
     /**
-     * @param array{mode: string, source: string, bytes: string} $batch
+     * @param array{mode: string, source: string, lock_order: string, bytes: string} $batch
      */
     private function run(string $batchId, array $batch): ImportResult
     {
         $started = hrtime(true);
         $mode = ImportMode::from($batch['mode']);
+        $order = LockOrder::from($batch['lock_order']);
         $source = ImportSource::from($batch['source']);
 
         try {
@@ -100,7 +102,7 @@ final class BatchImporter
 
         [$ok, $entries, $errors, $rolledBack] = ImportMode::Strict === $mode
             ? $this->strict($batchId, $statements, $errors)
-            : $this->partial($batchId, $statements, $errors);
+            : $this->partial($batchId, $statements, $errors, $order);
 
         foreach ($errors as $error) {
             $this->batches->recordError($batchId, $error); // outside every transaction: the rows survive the rollbacks above
@@ -120,7 +122,7 @@ final class BatchImporter
      *
      * @return array{int, int, list<StatementRejected>, int} statements booked, entries booked, all errors, rolled back
      */
-    private function partial(string $batchId, array $statements, array $errors): array
+    private function partial(string $batchId, array $statements, array $errors, LockOrder $order): array
     {
         $ok = 0;
         $entries = 0;
@@ -132,7 +134,7 @@ final class BatchImporter
                 continue;
             }
             try {
-                $entries += $this->retry->transactional(fn(Connection $connection): int => $this->writer->write($connection, $statement, $batchId));
+                $entries += $this->retry->transactional(fn(Connection $connection): int => $this->writer->write($connection, $statement, $batchId, $order));
                 ++$ok;
             } catch (StatementRejected $e) { // this statement was rolled back; the next one is a new transaction
                 $errors[] = $e;
@@ -159,7 +161,7 @@ final class BatchImporter
                 foreach ($statements as $statement) {
                     $connection->createSavepoint(self::SAVEPOINT);
                     try {
-                        $entries += $this->writer->write($connection, $statement, $batchId);
+                        $entries += $this->writer->write($connection, $statement, $batchId, LockOrder::Sorted, locked: true);
                         $connection->releaseSavepoint(self::SAVEPOINT);
                         $booked[] = $statement;
                     } catch (StatementRejected $e) {

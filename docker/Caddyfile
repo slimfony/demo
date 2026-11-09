@@ -25,10 +25,11 @@
 	}
 
 	frankenphp {
-		num_threads 6
+		# PHP threads and how many of them run the worker script; a worker that waits for the database is idle, so there can be more of them than cores
+		num_threads {$PHP_THREADS:18}
 		worker {
 			file /app/public/index.php
-			num 4
+			num {$PHP_WORKERS:16}
 			env MAX_REQUESTS 5000
 		}
 	}

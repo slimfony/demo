@@ -22,12 +22,12 @@ final class ImportRepository
      * Takes a batch for this worker: a queued one, or one that a worker started and then abandoned. Null when it is not available
      * (another worker is on it, or it is finished: this is a repeated delivery).
      *
-     * @return array{mode: string, source: string, bytes: string}|null
+     * @return array{mode: string, source: string, lock_order: string, bytes: string}|null
      */
     public function claim(string $batchId, string $worker): ?array
     {
         $row = $this->connection->fetchAssociative(
-            "UPDATE batches SET status = 'running', worker = ?, started_at = now() WHERE id = ? AND (status = 'queued' OR (status = 'running' AND started_at < now() - make_interval(secs => ?))) RETURNING mode, source, payload",
+            "UPDATE batches SET status = 'running', worker = ?, started_at = now() WHERE id = ? AND (status = 'queued' OR (status = 'running' AND started_at < now() - make_interval(secs => ?))) RETURNING mode, source, lock_order, payload",
             [$worker, $batchId, $this->abandonedAfterSeconds],
         );
         if (false === $row) {
@@ -35,11 +35,11 @@ final class ImportRepository
         }
         $payload = $row['payload']; // pdo_pgsql hands bytea over as a stream
         $bytes = \is_resource($payload) ? stream_get_contents($payload) : $payload;
-        if (!\is_string($row['mode']) || !\is_string($row['source']) || !\is_string($bytes)) {
+        if (!\is_string($row['mode']) || !\is_string($row['source']) || !\is_string($row['lock_order']) || !\is_string($bytes)) {
             throw new \UnexpectedValueException('A batch row does not have the expected column types.');
         }
 
-        return ['mode' => $row['mode'], 'source' => $row['source'], 'bytes' => $bytes];
+        return ['mode' => $row['mode'], 'source' => $row['source'], 'lock_order' => $row['lock_order'], 'bytes' => $bytes];
     }
 
     /**

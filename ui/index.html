@@ -85,6 +85,12 @@
             <option value="strict">Roll back the whole ZIP (slower)</option>
           </select>
         </label>
+        <label>Lock order
+          <select name="lock_order">
+            <option value="sorted" selected>Sorted (no deadlocks)</option>
+            <option value="appearance">As the entries appear (deadlocks)</option>
+          </select>
+        </label>
         <label>Account contention
           <select name="accounts">
             <option value="60" selected>Normal</option>

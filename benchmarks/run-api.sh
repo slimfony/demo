@@ -22,6 +22,6 @@ echo "${STEP_SECONDS:-15}" > "$out/api-$route.step"
 
 MSYS_NO_PATHCONV=1 docker run --rm --network "$network" -v "$work/benchmarks:/work" -w /work \
   -e TARGET=http://web:8080 -e ROUTE="$route" -e RATES="${RATES:-1000,2500,5000,7500,10000,12500}" -e STEP_SECONDS="${STEP_SECONDS:-15}" \
-  grafana/k6:latest run --quiet --summary-export="/work/results/$(basename "$out")/api-$route.json" k6/api.js
+  grafana/k6:latest run --quiet --summary-export="/work/${out#benchmarks/}/api-$route.json" k6/api.js
 
 echo "api lane ($route) done: $out/api-$route.json"

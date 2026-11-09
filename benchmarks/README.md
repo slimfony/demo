@@ -25,16 +25,41 @@ Run it on a quiet machine: the load generator and the system under test share th
 
 ## Results
 
-| Run | When | |
-| --- | --- | --- |
-| [2026-11-09-baseline](results/2026-11-09-baseline/README.md) | before any tuning | i5-14400, 16 CPUs and 8 GB for Docker, one machine for everything |
+Machine: i5-14400 (16 CPUs and 8 GB given to Docker), everything on one host, k6 included. Every run's raw data is in `results/`.
 
-What the baseline shows:
+| Run | What |
+| --- | --- |
+| [2026-11-09-baseline](results/2026-11-09-baseline/README.md) | the defaults of v0.2.0: 4 PHP workers, the importers lock rows in the order the entries appear |
+| [2026-11-09-workers](results/2026-11-09-workers/) | the authenticated route with 4, 8, 16 and 32 PHP workers |
+| [2026-11-09-sorted](results/2026-11-09-sorted/README.md) | the importers lock rows in a fixed (sorted) order |
 
-- **`GET /healthz`: 15,000 requests per second without an error or a dropped request** (p95 7 ms at 15,000, 2.4 ms at 10,000). The time spent inside the application is a few hundred microseconds; the rest is the web server and the network stack.
-- **`GET /api/batches/{id}` (token and database read) saturates at about 6,300 requests per second**, while the web container uses only about 3.6 of the 16 cores. The limit is not the CPU: four PHP workers that each wait about 0.65 ms for the database cannot answer more than 4 / 0.00065 = about 6,100 requests per second. Workers that mostly wait should outnumber the cores.
-- **The importers scale from 1 to 4, then get worse**: 1,000 ZIPs take 83 s with one importer, 45 s with two, 35 s with four, and 70 s with eight. The importers update the same few account rows in the order the entries appear, so with more importers the database ends many transactions as deadlocks (700 retries per 1,000 ZIPs at eight importers, 0 at one) and the core's `Retry` runs them again. The deadlock detection alone costs 100 ms each time.
-- **PgBouncer costs 5 to 10 percent** of the import throughput here (it is one more hop); it buys connection economy, which a single-machine run does not need.
+### What the baseline showed, and what was done about it
+
+**1. The importers stopped scaling at four, and got worse at eight.** The importers update the same few account rows in the order the entries appear, so with more importers the database ends many transactions as deadlocks (700 retries per 1,000 ZIPs at eight importers, none at one), and the core's `Retry` runs them again; each detection alone costs 100 ms. The fix is in the application, not in the core: lock the rows in a fixed order first (sorted by IBAN), then update. Same 1,000 ZIPs, PgBouncer off:
+
+| Importers | Before (rows in order of appearance) | After (sorted lock order) | Deadlock retries before → after |
+|---:|---:|---:|---:|
+| 1 | 78.7 s (12.7 ZIPs/s) | 78.3 s (12.8 ZIPs/s) | 0 → 0 |
+| 2 | 43.5 s (23.0) | 41.0 s (24.4) | 33 → 0 |
+| 4 | 32.7 s (30.6) | 21.4 s (46.6) | 116 → 0 |
+| 8 | 67.1 s (14.9) | **13.9 s (72.0)** | 686 → 0 |
+
+With the sorted order the throughput grows with every importer added (1 to 8: five and a half times), with no deadlock at all. The importer that locks in the order of appearance is still there as a choice (`lock_order=appearance`, a selector on the page), because the deadlock and the retry are worth seeing once.
+
+**2. The authenticated read was limited by the number of PHP workers, not by the CPU.** A worker that waits for the database does nothing; four workers that each wait about 0.65 ms cannot answer more than about 6,100 requests per second. `GET /api/batches/{id}` (verified token and a database read):
+
+| PHP workers | Saturates at (requests/s) | p95 at 7,500/s |
+| ---: | ---: | ---: |
+| 4 | about 6,500 | 699 ms (requests queue up) |
+| 8 | about 9,600 | 62 ms |
+| 16 | **about 12,400** | 5.7 ms |
+| 32 | about 12,000 | 13.6 ms |
+
+More workers than 16 bring nothing here: the CPU (about 6.6 of the 16 cores) and the database are next. The default is now 16 (`PHP_WORKERS`); the server uses about 200 MB idle and about 340 MB at full load.
+
+**3. `GET /healthz` takes 15,000 requests per second** without an error or a dropped request (p95 7 ms); the time inside the application is a few hundred microseconds.
+
+**4. PgBouncer costs 5 to 10 percent** of the import throughput here (one more hop). It buys connection economy, which a single-machine run does not need.
 
 ## Read these numbers with care
 

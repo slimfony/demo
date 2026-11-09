@@ -218,6 +218,8 @@ services:
       - "8443:8443"
     environment:
       LOG_LEVEL: info
+      PHP_WORKERS: "${BENCH_PHP_WORKERS:-16}"
+      PHP_THREADS: "${BENCH_PHP_THREADS:-18}"
       DB_HOST: ${BENCH_DB_HOST:-pgbouncer} # the benchmark can point the services at PostgreSQL directly
       DB_PORT: "${BENCH_DB_PORT:-6432}"
       DB_TRANSACTION_POOLING: "${BENCH_DB_POOLING:-true}"
