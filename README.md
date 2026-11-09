@@ -6,6 +6,20 @@ A complete service built on [slimfony/core](https://github.com/slimfony/core): P
 docker compose up -d --build --wait
 ```
 
+On Windows, set `BUILDX_BAKE_ENTITLEMENTS_FS=0` before the Docker command, in the same terminal (without it Docker Compose's builder can stop to ask for file system access):
+
+```bat
+:: Command Prompt
+set BUILDX_BAKE_ENTITLEMENTS_FS=0
+docker compose up -d --build --wait
+```
+
+```powershell
+# PowerShell
+$env:BUILDX_BAKE_ENTITLEMENTS_FS = "0"
+docker compose up -d --build --wait
+```
+
 | What | Where |
 | --- | --- |
 | The page | <http://localhost:8080> (HTTPS with a local certificate: <https://localhost:8443>) |
