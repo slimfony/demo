@@ -75,3 +75,10 @@ First release: a complete service on slimfony/core 0.3.0, started with one `dock
 - **The page:** import of up to 1,000 ZIPs with a tile per ZIP, live numbers, result card and log (through a Mercure hub in the web server); tokens and keys; a request test; live API and importer metrics; the latest batches; light and dark theme; a presenter mode and a short guided tour.
 - **Metrics** of the API, the relay and every importer, scraped by Prometheus; Grafana panels for all of them.
 - **Quality:** PHPStan at max level, PER-CS, behavioural tests (also against a real PostgreSQL), an end-to-end script that starts the stack and checks it, CI on GitHub Actions.
+
+[Unreleased]: https://github.com/slimfony/demo/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/slimfony/demo/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/slimfony/demo/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/slimfony/demo/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/slimfony/demo/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/slimfony/demo/releases/tag/v0.1.0
