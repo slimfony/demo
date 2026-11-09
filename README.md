@@ -6,7 +6,7 @@ A complete service built on [slimfony/core](https://github.com/slimfony/core): P
 docker compose up -d --build --wait
 ```
 
-![A run of 1,000 ZIPs of bank statements: one tile per ZIP, a shield on the ones uploaded with a token, 9,704 statements booked and 296 rejected, no deadlock, in 29 seconds](assets/hero.png)
+![A run of 1,000 ZIPs of bank statements: one tile per ZIP, a shield on the ones uploaded with a token, 9,687 statements booked and 313 rejected, no deadlock, in 21 seconds](assets/hero.png)
 
 The picture is a real run of 1,000 ZIPs (10,000 statements). [A recording of the whole run](assets/import.webm) (5 MB).
 
@@ -108,7 +108,7 @@ Measured with k6 on one laptop-class machine (i5-14400, everything in Docker), s
 | --- | --- |
 | `GET /healthz` | 15,000 requests per second without an error or a dropped request (p95 7 ms) |
 | `GET /api/batches/{id}` (verified token, database read) | about 12,400 requests per second with 16 PHP workers (6,500 with 4: workers that wait for the database are the limit, not the CPU) |
-| Import of 1,000 ZIPs (10,000 statements) | 14 s with eight importers, 78 s with one; rows are locked in a fixed order, so there is no deadlock and every importer added helps (before: 67 s with eight, because of the deadlocks) |
+| Import of 1,000 ZIPs (10,000 statements) | 13 s with eight importers, 40 ms per ZIP with one; rows are locked in a fixed order, so there is no deadlock and every importer added helps (before: 67 s with eight, because of the deadlocks) |
 
 **Is that good?** Yes, and for PHP very good. The same application on the same machine and server, started the classic way (a fresh boot for every request), saturates at about 1,300 requests per second and needs 3.6 ms per request; in worker mode it answers 15,000 and more at 0.5 ms. The import books about 700 statements per second with eight importers, each statement in its own transaction, checked against a schema and business rules. A bulk load would be faster, but it would give up the per-statement rollback that the import is about. It is one laptop-class machine, so read the ratios, not the absolute numbers.
 
