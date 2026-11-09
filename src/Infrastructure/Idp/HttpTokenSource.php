@@ -8,7 +8,7 @@ namespace Demo\Infrastructure\Idp;
  * Asks the demo identity provider for a token over HTTPS. The provider's certificate comes from a private CA that
  * PHP trusts through `openssl.cafile`, so the connection is verified like any other.
  */
-final class HttpTokenSource implements TokenSource
+final class HttpTokenSource
 {
     /** @var \Closure(string): string */
     private readonly \Closure $post;
@@ -23,7 +23,6 @@ final class HttpTokenSource implements TokenSource
         $this->post = $post ?? self::request(...);
     }
 
-    #[\Override]
     public function token(string $kind): string
     {
         $body = json_decode(($this->post)(\sprintf('%s/token?kind=%s', $this->baseUrl, rawurlencode($kind))), true);
@@ -32,7 +31,6 @@ final class HttpTokenSource implements TokenSource
         return \is_string($token) ? $token : throw new \RuntimeException('The identity provider returned no token.');
     }
 
-    #[\Override]
     public function rotate(): string
     {
         $body = json_decode(($this->post)($this->baseUrl . '/rotate'), true);

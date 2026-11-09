@@ -22,7 +22,6 @@ use Demo\Imports\BatchRepository;
 use Demo\Imports\RateLimiter;
 use Demo\Infrastructure\Http\HttpReadinessCheck;
 use Demo\Infrastructure\Idp\HttpTokenSource;
-use Demo\Infrastructure\Idp\TokenSource;
 use Demo\Infrastructure\Prometheus\HttpPrometheusQuery;
 use Demo\Infrastructure\Prometheus\PrometheusQuery;
 use Doctrine\DBAL\Connection;
@@ -99,7 +98,7 @@ return static function (ContainerBuilder $c): void {
     $c->register(BatchRepository::class);
     $c->register(UploadController::class)->setAutowired(true);
     $c->register(BatchController::class)->setAutowired(true);
-    $c->register(TokenSource::class, HttpTokenSource::class)->setArguments(['%env(IDP_URL)%']);
+    $c->register(HttpTokenSource::class)->setArguments(['%env(IDP_URL)%']);
     $c->register(DemoTokenController::class)->setAutowired(true);
     $c->register(DemoRotateController::class)->setAutowired(true);
     $c->register(KillTokens::class)->setAutowired(true);

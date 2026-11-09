@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Demo\Api\Controller;
 
 use Demo\Idp\TokenKind;
-use Demo\Infrastructure\Idp\TokenSource;
+use Demo\Infrastructure\Idp\HttpTokenSource;
 use Slimfony\Core\Http\Attributes;
 use Slimfony\Core\Http\ProblemResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class DemoTokenController
 {
-    public function __construct(private readonly TokenSource $tokens) {}
+    public function __construct(private readonly HttpTokenSource $tokens) {}
 
     public function __invoke(Request $request): Response
     {
