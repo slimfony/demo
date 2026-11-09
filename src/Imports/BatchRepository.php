@@ -61,6 +61,20 @@ final class BatchRepository
     }
 
     /**
+     * Every batch created since the given moment (unix seconds), oldest first: its state and what became of its statements.
+     * The page uses it to follow an import (see ImportRunController).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function since(Connection $connection, int $unixSeconds, int $limit): array
+    {
+        return $connection->fetchAllAssociative(
+            'SELECT id, status, source, statements_ok, statements_failed, statements_rolled_back, worker FROM batches WHERE created_at >= ? ORDER BY created_at LIMIT ?',
+            [gmdate('Y-m-d H:i:s', $unixSeconds) . '+00', $limit],
+        );
+    }
+
+    /**
      * @return list<array<string, mixed>> the latest batches, newest first, without data, sender and key id
      */
     public function recent(Connection $connection, int $limit): array

@@ -56,6 +56,16 @@ export function createTiles(root) {
       }
       return true;
     },
+    /** The state of a batch as the database has it (the page asks for these once a second, so a lost event costs nothing). */
+    apply(row) {
+      const tile = byId.get(row.id);
+      if (!tile) return false;
+      if ('running' === row.status) paint(tile, 'running', row.worker ? `, importer ${row.worker}` : '');
+      else if ('done' === row.status) paint(tile, row.statements_failed > 0 ? 'problems' : 'done', `: ${row.statements_ok} booked, ${row.statements_failed} rejected`);
+      else if ('failed' === row.status) paint(tile, 'failed', `: ${row.statements_failed} rejected, ${row.statements_rolled_back} good ones rolled back with them`);
+      else paint(tile, 'queued');
+      return true;
+    },
     knows(id) {
       return byId.has(id);
     },

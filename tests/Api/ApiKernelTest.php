@@ -55,7 +55,7 @@ final class ApiKernelTest extends TestCase
     {
         $metrics = new MetricsRegistry(new InMemoryStorage());
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP, worker TEXT, started_at TEXT, finished_at TEXT, statements_ok INTEGER DEFAULT 0, statements_failed INTEGER DEFAULT 0, entries_booked INTEGER DEFAULT 0)');
+        $connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP, worker TEXT, started_at TEXT, finished_at TEXT, statements_ok INTEGER DEFAULT 0, statements_failed INTEGER DEFAULT 0, statements_rolled_back INTEGER DEFAULT 0, entries_booked INTEGER DEFAULT 0)');
         $connection->executeStatement('CREATE TABLE import_errors (reason TEXT)');
         $connection->executeStatement('CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, payload TEXT, published_at TEXT)');
         $context = new RequestContext();
@@ -193,6 +193,22 @@ final class ApiKernelTest extends TestCase
         self::assertIsArray($body);
         self::assertIsArray($body['batches']);
         self::assertSame(['queued' => 1, 'with_token' => 1], array_intersect_key($body['batches'], ['queued' => 0, 'with_token' => 0]));
+    }
+
+    public function testTheRunListShowsEveryBatchSinceAMomentFromTheDatabase(): void
+    {
+        $kernel = $this->kernel();
+        $this->post($kernel, '/api/imports', ArchiveInspectorTest::zip(['a.xml' => '<x/>']), TokenKind::Valid);
+        $this->post($kernel, '/public/drop', ArchiveInspectorTest::zip(['a.xml' => '<x/>']));
+
+        $response = $kernel->handle(Request::create('/api/import/run?since=' . (time() - 60)));
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = json_decode((string) $response->getContent(), true, 8, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['batches']);
+        self::assertCount(2, $body['batches']);
+        self::assertStringNotContainsString('demo-client', (string) $response->getContent());
     }
 
     public function testTheSandboxRouteIsOpenButLooksInsideTheFile(): void

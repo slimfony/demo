@@ -29,7 +29,7 @@ final class UploadControllerTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $this->connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP, worker TEXT, started_at TEXT, finished_at TEXT, statements_ok INTEGER DEFAULT 0, statements_failed INTEGER DEFAULT 0, entries_booked INTEGER DEFAULT 0)');
+        $this->connection->executeStatement('CREATE TABLE batches (id TEXT PRIMARY KEY, sha256 TEXT, mode TEXT, status TEXT NOT NULL DEFAULT \'queued\', source TEXT, subject TEXT, token_kid TEXT, size_bytes INTEGER, entries INTEGER, payload BLOB, created_at TEXT DEFAULT CURRENT_TIMESTAMP, worker TEXT, started_at TEXT, finished_at TEXT, statements_ok INTEGER DEFAULT 0, statements_failed INTEGER DEFAULT 0, statements_rolled_back INTEGER DEFAULT 0, entries_booked INTEGER DEFAULT 0)');
         $this->connection->executeStatement('CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT, payload TEXT, published_at TEXT)');
         $this->controller = new UploadController(new ArchiveInspector(), new BatchRepository(), new Retry($this->connection), new RateLimiter(new ArrayWindowCounter(), 1000), new MetricsRegistry(new InMemoryStorage()));
     }

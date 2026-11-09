@@ -72,6 +72,7 @@ final class ImportRepository
         $this->connection->executeStatement(
             'UPDATE batches SET status = ?, statements_failed = ?, finished_at = now(),
                 statements_ok = (SELECT count(*) FROM statements WHERE batch_id = batches.id),
+                statements_rolled_back = (SELECT count(*) FROM import_errors WHERE batch_id = batches.id AND reason = \'rolled_back\'),
                 entries_booked = (SELECT count(*) FROM entries WHERE statement_pk IN (SELECT id FROM statements WHERE batch_id = batches.id))
              WHERE id = ?',
             [$status, $statementsFailed, $batchId],

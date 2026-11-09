@@ -17,6 +17,7 @@ CREATE TABLE batches (
     finished_at        timestamptz,
     statements_ok      integer NOT NULL DEFAULT 0,
     statements_failed  integer NOT NULL DEFAULT 0,
+    statements_rolled_back integer NOT NULL DEFAULT 0,
     entries_booked     integer NOT NULL DEFAULT 0
 );
 CREATE INDEX batches_created_at ON batches (created_at);

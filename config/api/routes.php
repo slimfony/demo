@@ -6,6 +6,7 @@ use Demo\Api\Controller\BatchController;
 use Demo\Api\Controller\BatchListController;
 use Demo\Api\Controller\DemoRotateController;
 use Demo\Api\Controller\DemoTokenController;
+use Demo\Api\Controller\ImportRunController;
 use Demo\Api\Controller\ImportSummaryController;
 use Demo\Api\Controller\RuntimeController;
 use Demo\Api\Controller\SampleArchiveController;
@@ -34,6 +35,7 @@ return static function (RouteCollection $r): void {
     $r->add('api_demo_rotate', new Route('/api/demo-rotate', $public(DemoRotateController::class), methods: ['POST']));
 
     $r->add('api_import_summary', new Route('/api/import/summary', $public(ImportSummaryController::class), methods: ['GET']));
+    $r->add('api_import_run', new Route('/api/import/run', $public(ImportRunController::class), methods: ['GET']));
     $r->add('api_batch_list', new Route('/api/batches', $public(BatchListController::class), methods: ['GET']));
 
     // Two ways in: with a token (the caller is known) and anonymously (sandbox with tighter limits).
