@@ -13,6 +13,17 @@ docker compose up -d --build --wait
 
 Docker needs about 3 GB of memory for this stack.
 
+**Contents**
+
+- [On the page](#on-the-page)
+- [The demo case: importing bank statements](#the-demo-case-importing-bank-statements)
+- [What runs](#what-runs)
+- [API](#api)
+- [Development](#development)
+- [Status](#status)
+- [Roadmap](#roadmap)
+- [License](#license)
+
 ## On the page
 
 - **Import.** Press *Start import*: the page generates up to 1,000 ZIPs of 10 statements each and uploads them to the API (19 in 20 with a token, the rest through the anonymous sandbox). One tile per ZIP shows where it is: waiting, importing, booked, booked with rejected statements, rolled back, refused. A shield marks the uploads that came with a verified token. Numbers, a result card and a live log of the services follow.
