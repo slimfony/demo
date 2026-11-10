@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+- **Two more database round trips are saved per statement** (eight became six): the statement and its first entries are one `WITH` statement, the balance and the statistics another. Eight importers: 1000 ZIPs in 11.5 s instead of 13.0 s. The lock order, which prevents the deadlocks, is unchanged.
+- The garbage collector chart says why it is empty: the collector has not run, this code leaves no cycles to collect (measured: `benchmarks/results/2026-11-10-gc-probe/`).
+
 ### Added
 - **A run of the page's import lives on the server.** The `generator` service generates and uploads the ZIPs, and also sends the requests of "Try it" (`POST /api/load/runs`, `GET /api/load/runs/latest`; 5,000, 50,000 or 200,000 requests to `/healthz` or `/api/runtime`) (import: `POST /api/import/runs` asks for a run, `GET /api/import/runs/latest` follows it), so a reload of the page no longer stops or loses a run: the page joins the run again. One run at a time (409 while one is going). New tables `import_runs`, `import_run_items` and `load_runs` in `docker/postgres/20-schema.sql`.
 - The charts of the page show whole-number ticks (an empty chart is 0 to 4 and grows with the data), and the two scales of the memory chart line up with the grid.

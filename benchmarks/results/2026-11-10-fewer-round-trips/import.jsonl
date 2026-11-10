@@ -1,0 +1,4 @@
+{"lock_order":"sorted","importers":1,"pooler":"on","zips":400,"batches":400,"done":400,"failed":0,"statements_booked":3875,"statements_rejected":125,"entries":21355,"seconds":14.91,"deadlock_retries":0,"still_open":0}
+{"lock_order":"sorted","importers":1,"pooler":"on","zips":400,"batches":400,"done":400,"failed":0,"statements_booked":3879,"statements_rejected":121,"entries":21272,"seconds":12.83,"deadlock_retries":0,"still_open":0}
+{"lock_order":"sorted","importers":8,"pooler":"on","zips":1000,"batches":1000,"done":1000,"failed":0,"statements_booked":9690,"statements_rejected":310,"entries":52866,"seconds":11.46,"deadlock_retries":0,"still_open":0}
+{"lock_order":"sorted","importers":8,"pooler":"on","zips":1000,"batches":1000,"done":1000,"failed":0,"statements_booked":9694,"statements_rejected":306,"entries":53194,"seconds":11.66,"deadlock_retries":0,"still_open":0}

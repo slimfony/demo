@@ -33,6 +33,8 @@ Machine: i5-14400 (16 CPUs and 8 GB given to Docker), everything on one host, k6
 | [2026-11-09-workers](results/2026-11-09-workers/) | the authenticated route with 4, 8, 16 and 32 PHP workers |
 | [2026-11-09-sorted](results/2026-11-09-sorted/README.md) | the importers lock rows in a fixed (sorted) order |
 | [2026-11-09-pull-batch](results/2026-11-09-pull-batch/README.md) | messages per NATS pull request: one importer 31.7 s to 15.8 s for 400 ZIPs |
+| [2026-11-10-fewer-round-trips](results/2026-11-10-fewer-round-trips/README.md) | six database round trips per statement instead of eight: eight importers 13.0 s to 11.5 s for 1000 ZIPs |
+| [2026-11-10-gc-probe](results/2026-11-10-gc-probe/README.md) | the garbage collector never ran in the demo's load, with or without `DEFER_GC` |
 | [2026-11-09-classic](results/2026-11-09-classic/README.md) | the same application without a worker (see [classic/](classic/compose.override.yaml)), for comparison |
 
 ### What the baseline showed, and what was done about it

@@ -119,6 +119,7 @@ export function startLive() {
   const kpiMemory = document.getElementById('kpi-memory');
   const kpiBusy = document.getElementById('kpi-busy');
   const kpiGc = document.getElementById('kpi-gc');
+  const gcNote = document.getElementById('gc-note');
 
   // the importers' side: what they book, how many ZIPs wait, how often the database ended a transaction
   poll(async () => {
@@ -150,7 +151,10 @@ export function startLive() {
       if (stats.requests_total !== null) {
         animateNumber(total, stats.requests_total, formatInteger);
       }
-      if (stats.gc_runs_total !== null) animateNumber(kpiGc, stats.gc_runs_total, formatInteger);
+      if (stats.gc_runs_total !== null) {
+        animateNumber(kpiGc, stats.gc_runs_total, formatInteger);
+        gcNote.hidden = stats.gc_runs_total > 0; // an empty chart is a result, not a fault: say why
+      }
       if (stats.gc_cycles_per_second !== null) gcChart.push(stats.at, stats.gc_cycles_per_second);
       if (stats.memory_bytes !== null) animateNumber(kpiMemory, stats.memory_bytes, formatBytes);
       if (stats.busy_workers !== null) animateNumber(kpiBusy, stats.busy_workers, formatInteger);

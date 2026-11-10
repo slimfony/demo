@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Demo\Import;
 
+use Demo\Camt\Entry;
 use Demo\Camt\Money;
 use Demo\Camt\Statement;
 use Demo\Camt\StatementRejected;
@@ -92,58 +93,115 @@ final class StatementWriter
         }
 
         try {
-            $statementPk = $connection->fetchOne(
-                'INSERT INTO statements (batch_id, statement_id, iban, currency, period_from, period_to, opening_balance, closing_balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id',
-                [$batchId, $statement->id, $statement->iban, $statement->currency, $statement->periodFrom, $statement->periodTo, Money::format($statement->openingCents), Money::format($statement->closingCents)],
-            );
+            $statementPk = $this->insertStatement($connection, $statement, $batchId);
         } catch (UniqueConstraintViolationException) {
             throw new StatementRejected(StatementRejected::DUPLICATE_STATEMENT, $statement->file, 'A statement with this id was already imported.', $statement->id);
         }
 
-        foreach (array_chunk($statement->entries, self::ENTRIES_PER_INSERT) as $chunk) {
+        foreach (\array_slice(array_chunk($statement->entries, self::ENTRIES_PER_INSERT), 1) as $chunk) { // the first chunk went in with the statement
             $values = [];
             $parameters = [];
             foreach ($chunk as $entry) {
                 $values[] = '(?, ?, ?, ?, ?, ?, ?)';
-                array_push($parameters, $statementPk, $entry->reference, $entry->bookingDate, Money::format($entry->cents), $entry->direction, $entry->counterparty, $entry->remittance);
+                array_push($parameters, $statementPk, ...$this->entryParameters($entry));
             }
             $connection->executeStatement('INSERT INTO entries (statement_pk, entry_ref, booking_date, amount, cdt_dbt, counterparty, remittance_info) VALUES ' . implode(', ', $values), $parameters);
         }
 
-        $connection->executeStatement(
-            'UPDATE accounts SET booked_balance = booked_balance + ?, last_statement_at = now() WHERE iban = ?',
-            [Money::format($statement->entriesCents()), $statement->iban],
-        );
-        LockOrder::Sorted === $order ? $this->updateStatisticsTogether($connection, $statement) : $this->updateStatisticsOneByOne($connection, $statement);
+        $balance = Money::format($statement->entriesCents());
+        if (LockOrder::Sorted === $order) {
+            $this->updateBalanceAndStatistics($connection, $statement, $balance);
+        } else {
+            $connection->executeStatement('UPDATE accounts SET booked_balance = booked_balance + ?, last_statement_at = now() WHERE iban = ?', [$balance, $statement->iban]);
+            $this->updateStatisticsOneByOne($connection, $statement);
+        }
 
         return \count($statement->entries);
     }
 
-    /** The rows are locked already (in order): one statement updates them all, one count per account. */
-    private function updateStatisticsTogether(Connection $connection, Statement $statement): void
+    /**
+     * The statement and its first entries in one round trip (a data-modifying WITH): the id the entries need never leaves the database.
+     * The unique constraint on the statement id still fires here, as it does for a plain insert.
+     *
+     * @return int the id of the statement
+     */
+    private function insertStatement(Connection $connection, Statement $statement, string $batchId): int
+    {
+        $header = [$batchId, $statement->id, $statement->iban, $statement->currency, $statement->periodFrom, $statement->periodTo, Money::format($statement->openingCents), Money::format($statement->closingCents)];
+        $insert = 'INSERT INTO statements (batch_id, statement_id, iban, currency, period_from, period_to, opening_balance, closing_balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+        $first = \array_slice($statement->entries, 0, self::ENTRIES_PER_INSERT);
+
+        if ([] === $first) {
+            $id = $connection->fetchOne($insert . ' RETURNING id', $header);
+        } else {
+            $values = [];
+            $parameters = $header;
+            foreach ($first as $entry) {
+                $values[] = '(?::text, ?::date, ?::numeric, ?::text, ?::text, ?::text)';
+                array_push($parameters, ...$this->entryParameters($entry));
+            }
+            $id = $connection->fetchOne(
+                "WITH st AS ($insert RETURNING id)
+                 INSERT INTO entries (statement_pk, entry_ref, booking_date, amount, cdt_dbt, counterparty, remittance_info)
+                 SELECT st.id, v.entry_ref, v.booking_date, v.amount, v.cdt_dbt, v.counterparty, v.remittance_info
+                 FROM st, (VALUES " . implode(', ', $values) . ') AS v(entry_ref, booking_date, amount, cdt_dbt, counterparty, remittance_info)
+                 RETURNING statement_pk',
+                $parameters,
+            );
+        }
+
+        return \is_int($id) ? $id : throw new \UnexpectedValueException('The statement was not inserted.');
+    }
+
+    /**
+     * @return list<string|null>
+     */
+    private function entryParameters(Entry $entry): array
+    {
+        return [$entry->reference, $entry->bookingDate, Money::format($entry->cents), $entry->direction, $entry->counterparty, $entry->remittance];
+    }
+
+    /**
+     * The account's balance and the statistics of the accounts the statement names, in one round trip. The rows are locked
+     * already (in order), so the one statement cannot deadlock with another importer.
+     */
+    private function updateBalanceAndStatistics(Connection $connection, Statement $statement, string $balance): void
+    {
+        $perAccount = $this->entriesPerAccount($statement);
+        $account = 'UPDATE accounts SET booked_balance = booked_balance + ?, last_statement_at = now() WHERE iban = ?';
+        if ([] === $perAccount) {
+            $connection->executeStatement($account, [$balance, $statement->iban]);
+
+            return;
+        }
+
+        $values = [];
+        $parameters = [$balance, $statement->iban];
+        foreach ($perAccount as $iban => [$count, $date]) {
+            $values[] = '(?::text, ?::int, ?::date)';
+            array_push($parameters, $iban, $count, $date);
+        }
+        $connection->executeStatement(
+            "WITH booked AS ($account RETURNING 1)
+             UPDATE account_stats s SET entries_total = s.entries_total + v.n, last_booking_date = GREATEST(s.last_booking_date, v.d)
+             FROM (VALUES " . implode(', ', $values) . ') AS v(iban, n, d) WHERE s.iban = v.iban',
+            $parameters,
+        );
+    }
+
+    /**
+     * @return array<string, array{int, string}> the entries of the statement and the latest booking date, by the account they count for
+     */
+    private function entriesPerAccount(Statement $statement): array
     {
         $perAccount = [];
         foreach ($statement->entries as $entry) {
             $iban = $entry->counterparty ?? $statement->iban;
             $perAccount[$iban] = [($perAccount[$iban][0] ?? 0) + 1, max($perAccount[$iban][1] ?? '', $entry->bookingDate)];
         }
-        if ([] === $perAccount) {
-            return;
-        }
 
-        $values = [];
-        $parameters = [];
-        foreach ($perAccount as $iban => [$count, $date]) {
-            $values[] = '(?::text, ?::int, ?::date)';
-            array_push($parameters, $iban, $count, $date);
-        }
-        $connection->executeStatement(
-            'UPDATE account_stats s SET entries_total = s.entries_total + v.n, last_booking_date = GREATEST(s.last_booking_date, v.d)
-             FROM (VALUES ' . implode(', ', $values) . ') AS v(iban, n, d) WHERE s.iban = v.iban',
-            $parameters,
-        );
+        return $perAccount;
     }
-
     /** One update per entry, in the order the entries appear: rows are locked as they are reached, in whatever order that is. */
     private function updateStatisticsOneByOne(Connection $connection, Statement $statement): void
     {
