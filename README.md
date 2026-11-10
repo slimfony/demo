@@ -143,15 +143,20 @@ npx playwright test    # the page in a real browser, against the running stack
 
 ## Status
 
-Version 0.4.0 (see [CHANGELOG.md](CHANGELOG.md)), pre-1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay with its sweeper, the importers (`partial` and `strict` mode, ordered locking), the chaos switches, the page with the live import view, the benchmarks, the Kubernetes manifests and the template script work, and are exercised by the tests, by `scripts/e2e.sh` and by a browser test in CI.
+Version 0.5.0 (see [CHANGELOG.md](CHANGELOG.md)), pre-1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay with its sweeper, the importers (`partial` and `strict` mode, ordered locking), the chaos switches, the page with the live import view, the benchmarks, the Kubernetes manifests and the template script work, and are exercised by the tests, by `scripts/e2e.sh` and by a browser test in CI.
 
 The numbers on the page and in the benchmarks come from one laptop-class machine running everything in Docker. They show how the pieces behave and how a change moves them; they are not a capacity figure for a cluster.
 
 ## Roadmap
 
-1. **A review of minimalism and speed.** One importer spends about 78 ms on a ZIP, and the ordered locking did not change that: where does the time go (the database round trips, the events sent to the page one HTTP call at a time, the XML and its schema, the broker)? Measure it stage by stage, then simplify and speed up what the numbers point at.
-2. **More runs of the benchmark**: a second machine, more importers than eight, the importers on their own cores.
-3. **What the demo teaches the core**: the findings that need a change in slimfony/core (garbage collection in the worker, the first request after a cold start, metrics for command line processes) are collected in the core's roadmap.
+Version 0.6.0:
+
+1. **More runs of the benchmark**: a second machine, more importers than eight, the importers on their own cores.
+2. **The relay on its own**: how many outbox messages per second it publishes, and whether publishing several at once (not waiting for each acknowledgement) is worth it.
+3. **Why a pull from the broker waits about 40 ms.** Pulling several messages at once avoids it; the cause (the NATS client, or the connection) is not known yet.
+4. **Two things not measured yet**: whether storing the ZIP as hex (twice its size) and parsing the XML with a DOM matter at all next to the database.
+5. **A smaller starting point**: a `slimfony/starter-template` repository, as described above.
+
 ## License
 
 MIT
