@@ -6,7 +6,7 @@ Manifests for the four application workloads (the web server, the identity provi
 | --- | --- |
 | `config.yaml` | settings, network policies, the ingress |
 | `web.yaml` | the API and the page: 3 pods, probes (`/readyz` for startup and readiness, `/healthz` for liveness), CPU autoscaling, a disruption budget |
-| `workers.yaml` | the relay (2 pods) and the importers (4 pods, autoscaled) |
+| `workers.yaml` | the relay (2 pods), the importers (4 pods, autoscaled) and the generator (1 pod, serves the runs the page asks for) |
 | `idp.yaml` | the demo identity provider (leave it out when you have a real issuer) |
 
 All containers run as a non-root user, with a read-only root file system, no capabilities and the runtime's default seccomp profile.

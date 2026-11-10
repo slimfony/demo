@@ -121,3 +121,44 @@ spec:
   minAvailable: 1
   selector:
     matchLabels: { app.kubernetes.io/name: relay }
+---
+# Serves the runs the page asks for: it uploads the ZIPs of an import and sends the requests of "Try it", through the web service,
+# so a reload of the page does not stop a run. One is enough (it takes one run at a time).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generator
+  labels: { app.kubernetes.io/name: generator, app.kubernetes.io/part-of: slimfony-demo }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: generator }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: generator, app.kubernetes.io/part-of: slimfony-demo }
+    spec:
+      terminationGracePeriodSeconds: 10
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: generator
+          image: slimfony-demo:0.2.0
+          command: ["php", "bin/generator"]
+          envFrom:
+            - configMapRef: { name: demo-config }
+          env:
+            - { name: DB_PASSWORD_FILE, value: /secrets/db_password }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          resources:
+            requests: { cpu: 100m, memory: 64Mi }
+            limits: { memory: 128Mi }
+          volumeMounts:
+            - { name: secrets, mountPath: /secrets, readOnly: true }
+            - { name: idp-ca, mountPath: /idp-ca/caddy/pki/authorities/local, readOnly: true } # the identity provider's certificate authority, to ask it for a token
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: secrets
+          secret: { secretName: demo-secrets, defaultMode: 0440 }
+        - name: idp-ca
+          secret: { secretName: idp-ca }
+        - { name: tmp, emptyDir: {} }

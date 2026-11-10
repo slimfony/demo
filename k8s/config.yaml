@@ -18,6 +18,7 @@ data:
   MERCURE_URL: http://web/.well-known/mercure
   # the identity provider
   IDP_URL: https://idp:8443
+  API_URL: http://web # where the generator sends the requests it makes for the page
   JWKS_URI: https://idp:8443/.well-known/jwks.json
   JWT_ISSUER: https://idp:8443
   JWT_AUDIENCE: slimfony-demo
