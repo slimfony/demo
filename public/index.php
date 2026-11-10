@@ -8,6 +8,7 @@ use Psr\Log\LoggerInterface;
 use Slimfony\Core\Config\Env;
 use Slimfony\Core\Config\Trust;
 use Slimfony\Core\Observability\MetricsRegistry;
+use Slimfony\Core\Worker\GarbageCollection;
 use Slimfony\Core\Worker\WorkerRunner;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -37,7 +38,9 @@ new WorkerRunner(
 
         return Request::createFromGlobals();
     },
-    deferGc: $env->bool('DEFER_GC'), // the collector runs between requests, not during them
-    gcRuns: $metrics->counter('php_gc_runs_total', 'Runs of the PHP cycle collector.'),
-    gcCollected: $metrics->counter('php_gc_collected_total', 'Cycles the collector freed.'),
+    gc: new GarbageCollection(
+        deferred: $env->bool('DEFER_GC'), // the collector runs between requests, not during them
+        runs: $metrics->counter('php_gc_runs_total', 'Runs of the PHP cycle collector.'),
+        collected: $metrics->counter('php_gc_collected_total', 'Cycles the collector freed.'),
+    ),
 )->run();
