@@ -12,6 +12,8 @@ test('the page loads and shows the running system', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('PHP never left');
   await expect(page.locator('#status-text')).toHaveText('All systems normal');
   await expect(page.locator('[data-fact="php"]').first()).toContainText('PHP 8.4');
+  await expect(page.locator('[data-fact="demo"]').first()).not.toHaveText('–'); // the version this build runs
+  await expect(page.locator('[data-fact="server-memory"]').first()).toContainText('MiB');
   await expect(page.locator('[data-fact="server"]').first()).toContainText('worker');
 });
 

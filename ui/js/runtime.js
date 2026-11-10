@@ -15,8 +15,10 @@ export function startRuntime() {
       set('jit', runtime.jit ? 'on (tracing)' : 'off');
       set('server', runtime.worker_mode ? `FrankenPHP ${runtime.frankenphp ?? ''} worker`.replace('  ', ' ') : 'classic request mode');
       set('core', runtime.core);
+      set('demo', runtime.app_version);
       set('uptime', formatUptime(runtime.uptime_seconds));
       set('memory', formatBytes(runtime.memory_bytes));
+      set('server-memory', formatBytes(runtime.server_memory_bytes));
       set('core-footer', runtime.core);
       set('php-footer', `PHP ${runtime.php}`);
     } catch {

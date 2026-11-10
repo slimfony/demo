@@ -54,9 +54,11 @@
         <div><dt>Language</dt><dd data-fact="php">–</dd></div>
         <div><dt>JIT</dt><dd data-fact="jit">–</dd></div>
         <div><dt>Server</dt><dd data-fact="server">–</dd></div>
+        <div><dt>slimfony/demo</dt><dd data-fact="demo">–</dd></div>
         <div><dt>slimfony/core</dt><dd data-fact="core">–</dd></div>
         <div><dt>Uptime</dt><dd data-fact="uptime">–</dd></div>
-        <div><dt>Worker memory</dt><dd data-fact="memory">–</dd></div>
+        <div><dt>PHP heap of a worker</dt><dd data-fact="memory">–</dd></div>
+        <div><dt>Server process</dt><dd data-fact="server-memory">–</dd></div>
       </dl>
     </section>
 
@@ -239,7 +241,7 @@
         <div><span class="num" id="kpi-retries">–</span><span class="cap">deadlocks run again, in total</span></div>
       </div>
       <div class="numbers">
-        <div><span class="num" id="kpi-memory">–</span><span class="cap">memory of the web server</span></div>
+        <div><span class="num" id="kpi-memory">–</span><span class="cap">memory of the server process</span></div>
         <div><span class="num" id="kpi-busy">–</span><span class="cap">PHP workers busy</span></div>
         <div><span class="num" id="kpi-gc">–</span><span class="cap">garbage collector runs, in total</span></div>
       </div>
@@ -254,7 +256,7 @@
       </div>
       <div class="charts">
         <figure><div id="chart-gc" class="chart" role="img" aria-label="Cycles freed by the garbage collector per second, last two minutes"></div><figcaption>Garbage collector: cycles freed per second<span id="gc-note" hidden> · it has not run: this code leaves no cycles to collect</span></figcaption></figure>
-        <figure><div id="chart-workers" class="chart" role="img" aria-label="Memory of the web server and busy PHP workers, last two minutes"></div><figcaption>Memory of the web server in MB (blue) and busy PHP workers (orange)</figcaption></figure>
+        <figure><div id="chart-workers" class="chart" role="img" aria-label="Memory of the server process and busy PHP workers, last two minutes"></div><figcaption>Memory of the server process in MB (blue) and busy PHP workers (orange)</figcaption></figure>
       </div>
     </section>
 

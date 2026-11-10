@@ -24,6 +24,8 @@ $env:BUILDX_BAKE_ENTITLEMENTS_FS = "0"
 docker compose up -d --build --wait
 ```
 
+The page's *Runtime* table shows which version of the demo runs. A plain build says `dev`; to show the version of the checkout, pass it: `APP_VERSION=$(git describe --tags --always) docker compose up -d --build --wait`.
+
 | What | Where |
 | --- | --- |
 | The page | <http://localhost:8080> (HTTPS with a local certificate: <https://localhost:8443>) |

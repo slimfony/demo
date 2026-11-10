@@ -48,6 +48,9 @@ RUN composer dump-autoload --no-dev --no-interaction --classmap-authoritative \
 # ---- runtime: only what is needed to run
 FROM base AS runtime
 WORKDIR /app
+# the version the page shows (`docker compose build` passes APP_VERSION); a late ARG, so a new version rebuilds only what follows
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 COPY --from=build /app /app
 COPY ui /app/ui
 COPY docker/Caddyfile /etc/frankenphp/Caddyfile

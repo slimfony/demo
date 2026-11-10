@@ -33,6 +33,9 @@ final class StatusAndRuntimeControllerTest extends TestCase
         self::assertFalse($body['worker_mode'], 'only the worker script (public/index.php) says it runs the worker loop');
         self::assertIsBool($body['jit']);
         self::assertIsInt($body['memory_bytes']);
+        self::assertIsInt($body['server_memory_bytes']);
+        self::assertGreaterThanOrEqual($body['memory_bytes'], $body['server_memory_bytes'], 'the server process holds at least the heap of one thread');
+        self::assertSame('dev', $body['app_version'], 'built without a version');
         self::assertGreaterThan(0, $body['memory_bytes']);
     }
 }

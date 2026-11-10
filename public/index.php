@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Demo\Api\ApiKernelFactory;
+use Demo\Api\ProcessMemory;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Config\Env;
 use Slimfony\Core\Config\Trust;
@@ -24,16 +25,15 @@ define('DEMO_WORKER_LOOP', true);
 
 $metrics = $kernel->get(MetricsRegistry::class);
 assert($metrics instanceof MetricsRegistry);
+$process = new ProcessMemory();
 $memory = $metrics->gauge('php_memory_bytes', 'Resident memory of the web server process (all its PHP threads).');
 
 new WorkerRunner(
     $kernel,
     $logger,
     maxRequests: $env->int('MAX_REQUESTS', 0),
-    requestFactory: static function () use ($memory): Request {
-        // the resident memory of the whole server process (Linux): FrankenPHP runs its PHP threads in one process
-        $statm = is_readable('/proc/self/statm') ? explode(' ', (string) file_get_contents('/proc/self/statm')) : [];
-        $memory->set(isset($statm[1]) ? (int) $statm[1] * 4096 : memory_get_usage(true));
+    requestFactory: static function () use ($memory, $process): Request {
+        $memory->set($process->resident()); // the whole server process: FrankenPHP runs its PHP threads in one process
 
         return Request::createFromGlobals();
     },
