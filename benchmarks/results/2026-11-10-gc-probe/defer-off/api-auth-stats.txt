@@ -1,0 +1,15 @@
+slimfony-demo-web-1 571.90% 200.9MiB / 640MiB
+slimfony-demo-pgbouncer-1 58.54% 18.84MiB / 64MiB
+slimfony-demo-postgres-1 212.17% 127.6MiB / 384MiB
+slimfony-demo-web-1 592.84% 209.5MiB / 640MiB
+slimfony-demo-pgbouncer-1 57.06% 17.89MiB / 64MiB
+slimfony-demo-postgres-1 213.14% 128.8MiB / 384MiB
+slimfony-demo-web-1 559.81% 209.8MiB / 640MiB
+slimfony-demo-pgbouncer-1 57.69% 18.12MiB / 64MiB
+slimfony-demo-postgres-1 208.79% 129.4MiB / 384MiB
+slimfony-demo-web-1 509.09% 206.6MiB / 640MiB
+slimfony-demo-pgbouncer-1 58.08% 17.7MiB / 64MiB
+slimfony-demo-postgres-1 182.69% 129MiB / 384MiB
+slimfony-demo-web-1 511.01% 202.6MiB / 640MiB
+slimfony-demo-pgbouncer-1 54.49% 18.12MiB / 64MiB
+slimfony-demo-postgres-1 176.34% 128.7MiB / 384MiB
