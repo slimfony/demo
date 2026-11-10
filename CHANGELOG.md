@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+- The page's *Runtime* table shows the released version without anyone passing it: the build reads the latest release from the changelog (`0.5.1`), and adds `+dev` while the changelog lists changes that are not released yet. `APP_VERSION` still overrides it.
+
 ## [0.5.1] - 2026-11-10
 
 ### Changed
@@ -36,7 +39,6 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - `import_stage_seconds{stage}`: where the time of an imported batch goes (claim, unzip, parse, write, finish, events).
 
 ### Changed
-- The page's *Runtime* table shows the version of the demo (`APP_VERSION`, a build argument; `dev` without one), and the memory as two rows with exact names: the PHP heap of a worker and the server process (what the operating system counts, the same figure as the Live section).
 - **Importers pull 5 messages per request** (`IMPORT_PULL_BATCH`). One message per pull cost about 41 ms of waiting per ZIP; with one importer 400 ZIPs now take 15.8 s instead of 31.7 s. With eight importers the database write is the limit and the gain is small (13.9 s to 13.0 s for 1000 ZIPs).
 - One database round trip less per statement: the lock query returns the account's currency.
 - The page's legend separates the tile colours (what happened to the ZIP) from the shield (how it was uploaded). New picture and recording.
@@ -45,7 +47,6 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ## [0.3.1] - 2026-11-09
 
 ### Changed
-- The page's *Runtime* table shows the version of the demo (`APP_VERSION`, a build argument; `dev` without one), and the memory as two rows with exact names: the PHP heap of a worker and the server process (what the operating system counts, the same figure as the Live section).
 - Uses slimfony/core 0.4.0: its `ProcessMetricsEndpoint` replaces the demo's own copy.
 
 ### Fixed
@@ -54,7 +55,6 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ## [0.3.0] - 2026-11-09
 
 ### Changed
-- The page's *Runtime* table shows the version of the demo (`APP_VERSION`, a build argument; `dev` without one), and the memory as two rows with exact names: the PHP heap of a worker and the server process (what the operating system counts, the same figure as the Live section).
 - **The importers lock the shared account rows in a fixed order** (sorted by IBAN) and update the statistics in one statement. No more deadlocks between importers, and 1,000 ZIPs take 14 s with eight importers instead of 67 s. The old behaviour is a choice (`lock_order=appearance`, a selector on the page).
 - **16 PHP workers by default** (`PHP_WORKERS`, `PHP_THREADS`): workers that wait for the database are idle, so there should be more of them than cores. The authenticated read now saturates at about 12,400 requests per second instead of 6,500.
 

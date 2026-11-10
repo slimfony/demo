@@ -44,12 +44,16 @@ RUN composer dump-autoload --no-dev --no-interaction --classmap-authoritative \
     && vendor/bin/slimfony warmup config/idp/services.php config/idp/routes.php var/cache/idp \
     && vendor/bin/slimfony warmup config/relay/services.php config/relay/routes.php var/cache/relay \
     && vendor/bin/slimfony warmup config/importer/services.php config/importer/routes.php var/cache/importer
+# The version the page shows, without anyone passing it: the latest release in the changelog, and `+dev` when the changelog
+# lists changes that are not released yet (so a build of the main branch after a release does not call itself the release).
+COPY CHANGELOG.md ./
+RUN awk '/^## \[Unreleased\]/ {unreleased = 1; next} /^## \[[0-9]/ {if (!version) {match($0, /\[[^]]+\]/); version = substr($0, RSTART + 1, RLENGTH - 2)} unreleased = 0} unreleased && /^- / {dirty = 1} END {print version (dirty ? "+dev" : "")}' CHANGELOG.md > VERSION && rm CHANGELOG.md
 
 # ---- runtime: only what is needed to run
 FROM base AS runtime
 WORKDIR /app
-# the version the page shows (`docker compose build` passes APP_VERSION); a late ARG, so a new version rebuilds only what follows
-ARG APP_VERSION=dev
+# a version given to the build wins over the one read from the changelog (`APP_VERSION=... docker compose build`)
+ARG APP_VERSION=
 ENV APP_VERSION=${APP_VERSION}
 COPY --from=build /app /app
 COPY ui /app/ui

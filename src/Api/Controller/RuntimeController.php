@@ -15,7 +15,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class RuntimeController
 {
-    public function __construct(private readonly ProcessMemory $memory = new ProcessMemory()) {}
+    public function __construct(
+        private readonly ProcessMemory $memory = new ProcessMemory(),
+        private readonly string $versionFile = __DIR__ . '/../../../VERSION',
+    ) {}
 
     public function __invoke(Request $request): Response
     {
@@ -39,11 +42,18 @@ final class RuntimeController
         ]);
     }
 
-    /** The version this image was built as (`APP_VERSION` build argument); `dev` when it was built without one. */
+    /**
+     * The version this image was built as: the `APP_VERSION` it was given, else the one the build read from the changelog (the
+     * file VERSION: the latest release, with `+dev` when there are unreleased changes); `dev` outside an image.
+     */
     private function version(): string
     {
-        $version = getenv('APP_VERSION');
+        $given = getenv('APP_VERSION');
+        if (\is_string($given) && '' !== $given) {
+            return $given;
+        }
+        $read = is_readable($this->versionFile) ? trim((string) file_get_contents($this->versionFile)) : '';
 
-        return \is_string($version) && '' !== $version ? $version : 'dev';
+        return '' !== $read ? $read : 'dev';
     }
 }

@@ -241,7 +241,7 @@ services:
       context: .
       target: runtime
       args:
-        APP_VERSION: ${APP_VERSION:-dev}
+        APP_VERSION: ${APP_VERSION:-}
       secrets:
         - composer_auth
     image: slimfony-demo:dev

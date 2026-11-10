@@ -23,6 +23,22 @@ final class StatusAndRuntimeControllerTest extends TestCase
         self::assertSame(['api' => true, 'database' => true, 'nats' => false], array_column($body['services'], 'ok', 'name'));
     }
 
+    public function testTheVersionIsReadFromTheFileTheBuildWrote(): void
+    {
+        $file = tempnam(sys_get_temp_dir(), 'version');
+        self::assertIsString($file);
+        file_put_contents($file, "0.5.1+dev\n");
+
+        try {
+            $body = json_decode((string) new RuntimeController(versionFile: $file)(Request::create('/api/runtime'))->getContent(), true, 8, \JSON_THROW_ON_ERROR);
+        } finally {
+            unlink($file);
+        }
+
+        self::assertIsArray($body);
+        self::assertSame('0.5.1+dev', $body['app_version']);
+    }
+
     public function testRuntimeFactsAreReadFromTheRealRuntime(): void
     {
         $body = json_decode((string) new RuntimeController()(Request::create('/api/runtime'))->getContent(), true, 8, \JSON_THROW_ON_ERROR);

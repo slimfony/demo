@@ -10,4 +10,5 @@ node_modules
 .php-cs-fixer.cache
 PLAN.md
 *.md
+!CHANGELOG.md
 compose.yaml
