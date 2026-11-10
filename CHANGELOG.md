@@ -4,6 +4,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+- Kubernetes: the web pods wait 8 seconds (`preStop`) before they stop, so the load balancer stops sending first and a deploy drops no request; the grace period is 45 seconds.
+
 ## [0.5.0] - 2026-11-10
 
 ### Changed
