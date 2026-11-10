@@ -5,6 +5,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ## [Unreleased]
 
 ### Changed
+- The relay, the importer and the generator share their set-up (database connection, log, metrics, metrics port) in one class, `Infrastructure\ProcessSetup`, instead of three copies.
 - Kubernetes: the `generator` Deployment (and `API_URL` in the config), so the page's import and "Try it" work in a cluster too.
 - The page's *Runtime* table shows the version of the demo (`APP_VERSION`, a build argument; `dev` without one), and the memory as two rows with exact names: the PHP heap of a worker and the server process (what the operating system counts, the same figure as the Live section).
 - **Two more database round trips are saved per statement** (eight became six): the statement and its first entries are one `WITH` statement, the balance and the statistics another. Eight importers: 1000 ZIPs in 11.5 s instead of 13.0 s. The lock order, which prevents the deadlocks, is unchanged.

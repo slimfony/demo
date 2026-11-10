@@ -12,24 +12,15 @@ use Demo\Camt\StatementRules;
 use Demo\Chaos\KillSwitchChaos;
 use Demo\Chaos\KillTokens;
 use Demo\Chaos\NoChaos;
-use Demo\Events\NullEventPublisher;
-use Demo\Infrastructure\Mercure\MercurePublisher;
-use Demo\Infrastructure\Mercure\TeeLogger;
 use Demo\Infrastructure\Nats\StreamProvisioner;
+use Demo\Infrastructure\ProcessSetup;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
 use Slimfony\Core\Config\Env;
-use Slimfony\Core\Database\ConnectionFactory;
 use Slimfony\Core\Database\ConnectionLifecycle;
 use Slimfony\Core\Database\Retry;
-use Slimfony\Core\Exception\ConfigurationException;
 use Slimfony\Core\Kernel;
-use Slimfony\Core\Log\JsonStdoutLogger;
 use Slimfony\Core\Log\RequestContext;
-use Slimfony\Core\Observability\ApcuStorage;
-use Slimfony\Core\Observability\MetricsController;
-use Slimfony\Core\Observability\MetricsRegistry;
-use Slimfony\Core\Observability\ProcessMetricsEndpoint;
 
 /** The composition root of an importer: a command line process, any number of which can run side by side. */
 final class ImporterKernelFactory
@@ -43,18 +34,14 @@ final class ImporterKernelFactory
 
     public function create(): Kernel
     {
-        if (!\function_exists('apcu_enabled') || !apcu_enabled()) {
-            throw new ConfigurationException('The importer keeps its metrics in APCu: start PHP with -d apc.enable_cli=1.');
-        }
+        $setup = new ProcessSetup($this->env);
+        $metrics = $setup->metrics('The importer');
 
         $worker = (string) gethostname();
         $context = new RequestContext();
-        $metrics = new MetricsRegistry(new ApcuStorage());
-        // events and the log view go to the page through the Mercure hub of the web server (off when no hub is configured)
-        $hub = $this->env->string('MERCURE_URL', '');
-        $events = '' === $hub ? new NullEventPublisher() : new MercurePublisher($hub, $this->env->string('MERCURE_KEY'));
-        $logger = new TeeLogger(new JsonStdoutLogger($this->env->string('LOG_LEVEL', 'info'), $context), $events, 'importer');
-        $connection = ConnectionFactory::create($this->databaseUrl(), transactionPooling: $this->env->bool('DB_TRANSACTION_POOLING', true), applicationName: 'demo-importer');
+        $events = $setup->events();
+        $logger = $setup->logger('importer', $context, $events);
+        $connection = $setup->connection('demo-importer');
         $lifecycle = new ConnectionLifecycle($connection, $logger);
         $retry = new Retry($connection, $logger, maxAttempts: 8, retries: $metrics->counter('db_retries_total', 'Database operations that were retried (deadlocks, lost connections).', ['reason']));
         $stages = $metrics->histogram('import_stage_seconds', 'Time of one stage of importing a batch (claim, unzip, parse, write, finish; events is the notifications to the page).', ['stage']);
@@ -80,7 +67,7 @@ final class ImporterKernelFactory
         $consumer->setBatching($this->env->int('IMPORT_PULL_BATCH', 5))->setIterations(1)->setExpires(0.5)->setDelay(0.0); // a few messages per pull request (every pull costs about 40 ms of waiting), then back to the loop (and Prometheus)
         $consumer->create();
 
-        $endpoint = new ProcessMetricsEndpoint('tcp://0.0.0.0:' . $this->env->int('METRICS_PORT', 9100), new MetricsController($metrics, $this->env->string('METRICS_TOKEN')));
+        $endpoint = $setup->metricsEndpoint($metrics);
         $importerWorker = new ImporterWorker(
             $consumer,
             $importer,
@@ -111,18 +98,6 @@ final class ImporterKernelFactory
                 ConnectionLifecycle::class => $lifecycle,
                 ImporterWorker::class => $importerWorker,
             ],
-        );
-    }
-
-    private function databaseUrl(): string
-    {
-        return \sprintf(
-            'pdo-pgsql://%s:%s@%s:%d/%s',
-            rawurlencode($this->env->string('DB_USER')),
-            rawurlencode($this->env->string('DB_PASSWORD')),
-            $this->env->string('DB_HOST'),
-            $this->env->int('DB_PORT', 5432),
-            $this->env->string('DB_NAME'),
         );
     }
 }

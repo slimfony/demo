@@ -9,8 +9,8 @@ use Demo\Generator\RunGenerator;
 use Demo\Imports\LoadRunRepository;
 use Demo\Imports\RunRepository;
 use Demo\Infrastructure\Idp\HttpTokenSource;
+use Demo\Infrastructure\ProcessSetup;
 use Slimfony\Core\Config\Env;
-use Slimfony\Core\Database\ConnectionFactory;
 use Slimfony\Core\Log\JsonStdoutLogger;
 use Slimfony\Core\Log\RequestContext;
 
@@ -19,18 +19,7 @@ require __DIR__ . '/../vendor/autoload.php';
 // The process that uploads the ZIPs of the page's import runs: it waits for a run in the database, serves it and waits again.
 $env = Env::fromGlobals();
 $logger = new JsonStdoutLogger($env->string('LOG_LEVEL', 'info'), new RequestContext());
-$connection = ConnectionFactory::create(
-    \sprintf(
-        'pdo-pgsql://%s:%s@%s:%d/%s',
-        rawurlencode($env->string('DB_USER')),
-        rawurlencode($env->string('DB_PASSWORD')),
-        $env->string('DB_HOST'),
-        $env->int('DB_PORT', 5432),
-        $env->string('DB_NAME'),
-    ),
-    transactionPooling: $env->bool('DB_TRANSACTION_POOLING', true),
-    applicationName: 'demo-generator',
-);
+$connection = new ProcessSetup($env)->connection('demo-generator');
 $generator = new RunGenerator(
     $connection,
     new RunRepository(),
