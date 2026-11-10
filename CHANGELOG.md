@@ -4,7 +4,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-10
+
 ### Changed
+- Uses slimfony/core 0.5.0: a database failover is retried, a body without a declared length is limited, `Bearer` and JWT values are masked in log messages, and every request carries a span id and an outgoing `traceparent`.
 - Kubernetes: the web pods wait 8 seconds (`preStop`) before they stop, so the load balancer stops sending first and a deploy drops no request; the grace period is 45 seconds.
 
 ## [0.5.0] - 2026-11-10
@@ -91,7 +94,8 @@ First release: a complete service on slimfony/core 0.3.0, started with one `dock
 - **Metrics** of the API, the relay and every importer, scraped by Prometheus; Grafana panels for all of them.
 - **Quality:** PHPStan at max level, PER-CS, behavioural tests (also against a real PostgreSQL), an end-to-end script that starts the stack and checks it, CI on GitHub Actions.
 
-[Unreleased]: https://github.com/slimfony/demo/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/slimfony/demo/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/slimfony/demo/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/slimfony/demo/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/slimfony/demo/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/slimfony/demo/compare/v0.3.0...v0.3.1

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6be241cabb39e7243dc83b8e8475dbf6",
+    "content-hash": "57a886b7af5aae2359b148b7b66274e0",
     "packages": [
         {
             "name": "basis-company/nats",
@@ -467,16 +467,16 @@
         },
         {
             "name": "slimfony/core",
-            "version": "v0.4.0",
+            "version": "v0.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/slimfony/core.git",
-                "reference": "25592783948adcf28faf9bb51a9d870d0fda68f3"
+                "reference": "e02b8e258e98d71f4b1ebde6bfbe1208d0df6cf4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/slimfony/core/zipball/25592783948adcf28faf9bb51a9d870d0fda68f3",
-                "reference": "25592783948adcf28faf9bb51a9d870d0fda68f3",
+                "url": "https://api.github.com/repos/slimfony/core/zipball/e02b8e258e98d71f4b1ebde6bfbe1208d0df6cf4",
+                "reference": "e02b8e258e98d71f4b1ebde6bfbe1208d0df6cf4",
                 "shasum": ""
             },
             "require": {
@@ -537,10 +537,10 @@
             ],
             "support": {
                 "issues": "https://github.com/slimfony/core/issues",
-                "source": "https://github.com/slimfony/core/tree/v0.4.0"
+                "source": "https://github.com/slimfony/core/tree/v0.5.0"
             },
-            "time": "2026-11-09T19:11:30+00:00",
-            "published-time": "2026-11-09T19:13:00+00:00"
+            "time": "2026-11-10T08:29:55+00:00",
+            "published-time": "2026-11-10T08:31:31+00:00"
         },
         {
             "name": "symfony/dependency-injection",
