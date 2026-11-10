@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-10
+
+### Changed
+- Uses slimfony/core 0.7.0 (no API change; the core's releases are now attested and ship an SBOM).
+
 ## [0.6.0] - 2026-11-10
 
 ### Changed
@@ -97,7 +102,8 @@ First release: a complete service on slimfony/core 0.3.0, started with one `dock
 - **Metrics** of the API, the relay and every importer, scraped by Prometheus; Grafana panels for all of them.
 - **Quality:** PHPStan at max level, PER-CS, behavioural tests (also against a real PostgreSQL), an end-to-end script that starts the stack and checks it, CI on GitHub Actions.
 
-[Unreleased]: https://github.com/slimfony/demo/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/slimfony/demo/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/slimfony/demo/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/slimfony/demo/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/slimfony/demo/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/slimfony/demo/compare/v0.4.0...v0.5.0
