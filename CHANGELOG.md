@@ -4,7 +4,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-18
+
 ### Changed
+- Uses slimfony/core 1.0 (`^1.0`). The services that implement `ResetInterface` are reset without a tag, so the configuration no longer uses the `@internal` class `ResetPass`.
 - PgBouncer waits at most 3 s for a server connection and retries a failed server login after 1 s (`query_wait_timeout`, `server_login_retry`), so a request fails fast while the database is away: in the failure injection under load the failed requests fell from 3.5% to 0.1% and the slowest request from 15 s to 4 s.
 - The API counts `db_retries_exhausted_total` as well.
 
@@ -108,7 +111,8 @@ First release: a complete service on slimfony/core 0.3.0, started with one `dock
 - **Metrics** of the API, the relay and every importer, scraped by Prometheus; Grafana panels for all of them.
 - **Quality:** PHPStan at max level, PER-CS, behavioural tests (also against a real PostgreSQL), an end-to-end script that starts the stack and checks it, CI on GitHub Actions.
 
-[Unreleased]: https://github.com/slimfony/demo/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/slimfony/demo/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/slimfony/demo/compare/v0.7.0...v1.0.0
 [0.7.0]: https://github.com/slimfony/demo/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/slimfony/demo/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/slimfony/demo/compare/v0.5.0...v0.5.1

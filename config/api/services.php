@@ -46,17 +46,16 @@ use Slimfony\Core\Log\RequestContext;
 use Slimfony\Core\Observability\MetricsController;
 use Slimfony\Core\Observability\MetricsMiddleware;
 use Slimfony\Core\Observability\MetricsRegistry;
-use Slimfony\Core\Worker\ResetPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
 return static function (ContainerBuilder $c): void {
     // Built at boot from the environment (they carry secrets or addresses), so the compiled cache holds none of them.
     $c->register(LoggerInterface::class)->setSynthetic(true)->setPublic(true);
-    $c->register(RequestContext::class)->setSynthetic(true)->setPublic(true)->addTag(ResetPass::TAG);
+    $c->register(RequestContext::class)->setSynthetic(true)->setPublic(true);
     $c->register(MetricsRegistry::class)->setSynthetic(true)->setPublic(true);
     $c->register(Connection::class)->setSynthetic(true)->setPublic(true);
-    $c->register(ConnectionLifecycle::class)->setSynthetic(true)->setPublic(true)->addTag(ResetPass::TAG);
+    $c->register(ConnectionLifecycle::class)->setSynthetic(true)->setPublic(true);
     $c->register(Retry::class)->setSynthetic(true)->setPublic(true);
     $c->register(MetricsController::class)->setSynthetic(true)->setPublic(true);
     $c->register(ChaosSwitch::class)->setSynthetic(true)->setPublic(true);
