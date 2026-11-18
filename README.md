@@ -153,9 +153,7 @@ Next:
 
 1. **More runs of the benchmark**: a second machine, more importers than eight, the importers on their own cores.
 2. **The relay on its own**: how many outbox messages per second it publishes, and whether publishing several at once (not waiting for each acknowledgement) is worth it.
-3. **Why a pull from the broker waits about 40 ms.** Pulling several messages at once avoids it; the cause (the NATS client, or the connection) is not known yet.
-4. **Two things not measured yet**: whether storing the ZIP as hex (twice its size) and parsing the XML with a DOM matter at all next to the database.
-5. **A smaller starting point**: a `slimfony/starter-template` repository, as described above.
+3. **A smaller starting point**: a `slimfony/starter-template` repository, as described above.
 
 ## License
 
