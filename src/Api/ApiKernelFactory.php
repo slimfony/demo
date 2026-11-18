@@ -50,6 +50,7 @@ final class ApiKernelFactory
             $connection,
             $logger,
             retries: $metrics->counter('db_retries_total', 'Database operations that were retried.', ['reason']),
+            exhausted: $metrics->counter('db_retries_exhausted_total', 'Database operations that failed after all attempts.', ['reason']),
         );
 
         // fail at boot, not at the first request, when an address the container resolves from the environment is missing

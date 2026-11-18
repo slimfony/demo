@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+- PgBouncer waits at most 3 s for a server connection and retries a failed server login after 1 s (`query_wait_timeout`, `server_login_retry`), so a request fails fast while the database is away: in the failure injection under load the failed requests fell from 3.5% to 0.1% and the slowest request from 15 s to 4 s.
+- The API counts `db_retries_exhausted_total` as well.
+
+### Added
+- `benchmarks/run-failure.sh`: failure injection under load (PgBouncer and PostgreSQL restarted, the identity provider stopped), with the result per 5-second slice.
 ## [0.7.0] - 2026-11-10
 
 ### Changed

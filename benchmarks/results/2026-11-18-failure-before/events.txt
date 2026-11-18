@@ -1,0 +1,6 @@
+20s restart pgbouncer
+23s pgbouncer restart returned
+50s restart postgres
+51s postgres restart returned
+85s stop idp
+115s start idp

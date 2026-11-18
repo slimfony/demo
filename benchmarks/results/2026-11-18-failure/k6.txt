@@ -1,0 +1,386 @@
+
+
+  █ THRESHOLDS 
+
+    http_req_duration{slice:0}
+    ✓ 'max>=0' max=36.53ms
+
+    http_req_duration{slice:10}
+    ✓ 'max>=0' max=11.4ms
+
+    http_req_duration{slice:100}
+    ✓ 'max>=0' max=13.19ms
+
+    http_req_duration{slice:105}
+    ✓ 'max>=0' max=10.58ms
+
+    http_req_duration{slice:110}
+    ✓ 'max>=0' max=12.48ms
+
+    http_req_duration{slice:115}
+    ✓ 'max>=0' max=10.29ms
+
+    http_req_duration{slice:120}
+    ✓ 'max>=0' max=8.95ms
+
+    http_req_duration{slice:125}
+    ✓ 'max>=0' max=14.27ms
+
+    http_req_duration{slice:130}
+    ✓ 'max>=0' max=10.61ms
+
+    http_req_duration{slice:135}
+    ✓ 'max>=0' max=5.5ms
+
+    http_req_duration{slice:140}
+    ✓ 'max>=0' max=29ms
+
+    http_req_duration{slice:145}
+    ✓ 'max>=0' max=15.49ms
+
+    http_req_duration{slice:15}
+    ✓ 'max>=0' max=22.49ms
+
+    http_req_duration{slice:20}
+    ✓ 'max>=0' max=4.05s
+
+    http_req_duration{slice:25}
+    ✓ 'max>=0' max=18.39ms
+
+    http_req_duration{slice:30}
+    ✓ 'max>=0' max=9.5ms
+
+    http_req_duration{slice:35}
+    ✓ 'max>=0' max=7.76ms
+
+    http_req_duration{slice:40}
+    ✓ 'max>=0' max=13.84ms
+
+    http_req_duration{slice:45}
+    ✓ 'max>=0' max=1.02s
+
+    http_req_duration{slice:5}
+    ✓ 'max>=0' max=5.46ms
+
+    http_req_duration{slice:50}
+    ✓ 'max>=0' max=477.13ms
+
+    http_req_duration{slice:55}
+    ✓ 'max>=0' max=18.01ms
+
+    http_req_duration{slice:60}
+    ✓ 'max>=0' max=5.75ms
+
+    http_req_duration{slice:65}
+    ✓ 'max>=0' max=6.09ms
+
+    http_req_duration{slice:70}
+    ✓ 'max>=0' max=8.08ms
+
+    http_req_duration{slice:75}
+    ✓ 'max>=0' max=7.67ms
+
+    http_req_duration{slice:80}
+    ✓ 'max>=0' max=7.65ms
+
+    http_req_duration{slice:85}
+    ✓ 'max>=0' max=5.6ms
+
+    http_req_duration{slice:90}
+    ✓ 'max>=0' max=7.96ms
+
+    http_req_duration{slice:95}
+    ✓ 'max>=0' max=12.3ms
+
+    http_req_failed{slice:0}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:10}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:100}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:105}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:110}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:115}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:120}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:125}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:130}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:135}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:140}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:145}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:15}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:20}
+    ✓ 'rate>=0' rate=1.55%
+
+    http_req_failed{slice:25}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:30}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:35}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:40}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:45}
+    ✓ 'rate>=0' rate=1.12%
+
+    http_req_failed{slice:5}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:50}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:55}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:60}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:65}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:70}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:75}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:80}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:85}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:90}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_req_failed{slice:95}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_reqs{slice:0}
+    ✓ 'count>=0' count=7397
+
+    http_reqs{slice:10}
+    ✓ 'count>=0' count=7499
+
+    http_reqs{slice:100}
+    ✓ 'count>=0' count=7501
+
+    http_reqs{slice:105}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:110}
+    ✓ 'count>=0' count=7499
+
+    http_reqs{slice:115}
+    ✓ 'count>=0' count=7501
+
+    http_reqs{slice:120}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:125}
+    ✓ 'count>=0' count=7499
+
+    http_reqs{slice:130}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:135}
+    ✓ 'count>=0' count=7501
+
+    http_reqs{slice:140}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:145}
+    ✓ 'count>=0' count=7499
+
+    http_reqs{slice:15}
+    ✓ 'count>=0' count=7501
+
+    http_reqs{slice:20}
+    ✓ 'count>=0' count=6709
+
+    http_reqs{slice:25}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:30}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:35}
+    ✓ 'count>=0' count=7501
+
+    http_reqs{slice:40}
+    ✓ 'count>=0' count=7499
+
+    http_reqs{slice:45}
+    ✓ 'count>=0' count=7454
+
+    http_reqs{slice:5}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:50}
+    ✓ 'count>=0' count=7208
+
+    http_reqs{slice:55}
+    ✓ 'count>=0' count=7502
+
+    http_reqs{slice:60}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:65}
+    ✓ 'count>=0' count=7499
+
+    http_reqs{slice:70}
+    ✓ 'count>=0' count=7501
+
+    http_reqs{slice:75}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:80}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:85}
+    ✓ 'count>=0' count=7500
+
+    http_reqs{slice:90}
+    ✓ 'count>=0' count=7499
+
+    http_reqs{slice:95}
+    ✓ 'count>=0' count=7500
+
+
+  █ TOTAL RESULTS 
+
+    HTTP
+    http_req_duration..............: avg=7.12ms   p(99)=62.5ms   max=4.05s   
+      { expected_response:true }...: avg=6.79ms   p(99)=37.86ms  max=1.09s   
+      { slice:0 }..................: avg=1.13ms   p(99)=5.72ms   max=36.53ms 
+      { slice:10 }.................: avg=1.24ms   p(99)=2.6ms    max=11.4ms  
+      { slice:100 }................: avg=968.2µs  p(99)=2.26ms   max=13.19ms 
+      { slice:105 }................: avg=886.51µs p(99)=1.69ms   max=10.58ms 
+      { slice:110 }................: avg=982.75µs p(99)=2.31ms   max=12.48ms 
+      { slice:115 }................: avg=892.9µs  p(99)=1.75ms   max=10.29ms 
+      { slice:120 }................: avg=903.46µs p(99)=1.7ms    max=8.95ms  
+      { slice:125 }................: avg=890.07µs p(99)=1.63ms   max=14.27ms 
+      { slice:130 }................: avg=945.89µs p(99)=1.96ms   max=10.61ms 
+      { slice:135 }................: avg=940.49µs p(99)=2.02ms   max=5.5ms   
+      { slice:140 }................: avg=1.15ms   p(99)=2.39ms   max=29ms    
+      { slice:145 }................: avg=1.18ms   p(99)=2.5ms    max=15.49ms 
+      { slice:15 }.................: avg=1.06ms   p(99)=2.89ms   max=22.49ms 
+      { slice:20 }.................: avg=91.64ms  p(99)=1.07s    max=4.05s   
+      { slice:25 }.................: avg=1ms      p(99)=2.01ms   max=18.39ms 
+      { slice:30 }.................: avg=928.56µs p(99)=1.91ms   max=9.5ms   
+      { slice:35 }.................: avg=923.79µs p(99)=1.75ms   max=7.76ms  
+      { slice:40 }.................: avg=960.69µs p(99)=2.04ms   max=13.84ms 
+      { slice:45 }.................: avg=91.43ms  p(99)=938.44ms max=1.02s   
+      { slice:5 }..................: avg=1.04ms   p(99)=2.18ms   max=5.46ms  
+      { slice:50 }.................: avg=13.91ms  p(99)=380.45ms max=477.13ms
+      { slice:55 }.................: avg=977.93µs p(99)=2.12ms   max=18.01ms 
+      { slice:60 }.................: avg=943.68µs p(99)=1.86ms   max=5.75ms  
+      { slice:65 }.................: avg=887.49µs p(99)=1.7ms    max=6.09ms  
+      { slice:70 }.................: avg=913.83µs p(99)=1.74ms   max=8.08ms  
+      { slice:75 }.................: avg=877.16µs p(99)=1.74ms   max=7.67ms  
+      { slice:80 }.................: avg=970.32µs p(99)=2.01ms   max=7.65ms  
+      { slice:85 }.................: avg=881.22µs p(99)=1.7ms    max=5.6ms   
+      { slice:90 }.................: avg=928.03µs p(99)=1.88ms   max=7.96ms  
+      { slice:95 }.................: avg=911.1µs  p(99)=1.69ms   max=12.3ms  
+    http_req_failed................: 0.08%  189 out of 223876
+      { slice:0 }..................: 0.00%  0 out of 7397
+      { slice:10 }.................: 0.00%  0 out of 7499
+      { slice:100 }................: 0.00%  0 out of 7501
+      { slice:105 }................: 0.00%  0 out of 7500
+      { slice:110 }................: 0.00%  0 out of 7499
+      { slice:115 }................: 0.00%  0 out of 7501
+      { slice:120 }................: 0.00%  0 out of 7500
+      { slice:125 }................: 0.00%  0 out of 7499
+      { slice:130 }................: 0.00%  0 out of 7500
+      { slice:135 }................: 0.00%  0 out of 7501
+      { slice:140 }................: 0.00%  0 out of 7500
+      { slice:145 }................: 0.00%  0 out of 7499
+      { slice:15 }.................: 0.00%  0 out of 7501
+      { slice:20 }.................: 1.55%  104 out of 6709
+      { slice:25 }.................: 0.00%  0 out of 7500
+      { slice:30 }.................: 0.00%  0 out of 7500
+      { slice:35 }.................: 0.00%  0 out of 7501
+      { slice:40 }.................: 0.00%  0 out of 7499
+      { slice:45 }.................: 1.12%  84 out of 7454
+      { slice:5 }..................: 0.00%  0 out of 7500
+      { slice:50 }.................: 0.00%  0 out of 7208
+      { slice:55 }.................: 0.00%  0 out of 7502
+      { slice:60 }.................: 0.00%  0 out of 7500
+      { slice:65 }.................: 0.00%  0 out of 7499
+      { slice:70 }.................: 0.00%  0 out of 7501
+      { slice:75 }.................: 0.00%  0 out of 7500
+      { slice:80 }.................: 0.00%  0 out of 7500
+      { slice:85 }.................: 0.00%  0 out of 7500
+      { slice:90 }.................: 0.00%  0 out of 7499
+      { slice:95 }.................: 0.00%  0 out of 7500
+    http_reqs......................: 223876 1491.807675/s
+      { slice:0 }..................: 7397   49.290238/s
+      { slice:10 }.................: 7499   49.96992/s
+      { slice:100 }................: 7501   49.983247/s
+      { slice:105 }................: 7500   49.976583/s
+      { slice:110 }................: 7499   49.96992/s
+      { slice:115 }................: 7501   49.983247/s
+      { slice:120 }................: 7500   49.976583/s
+      { slice:125 }................: 7499   49.96992/s
+      { slice:130 }................: 7500   49.976583/s
+      { slice:135 }................: 7501   49.983247/s
+      { slice:140 }................: 7500   49.976583/s
+      { slice:145 }................: 7499   49.96992/s
+      { slice:15 }.................: 7501   49.983247/s
+      { slice:20 }.................: 6709   44.70572/s
+      { slice:25 }.................: 7500   49.976583/s
+      { slice:30 }.................: 7500   49.976583/s
+      { slice:35 }.................: 7501   49.983247/s
+      { slice:40 }.................: 7499   49.96992/s
+      { slice:45 }.................: 7454   49.67006/s
+      { slice:5 }..................: 7500   49.976583/s
+      { slice:50 }.................: 7208   48.030828/s
+      { slice:55 }.................: 7502   49.98991/s
+      { slice:60 }.................: 7500   49.976583/s
+      { slice:65 }.................: 7499   49.96992/s
+      { slice:70 }.................: 7501   49.983247/s
+      { slice:75 }.................: 7500   49.976583/s
+      { slice:80 }.................: 7500   49.976583/s
+      { slice:85 }.................: 7500   49.976583/s
+      { slice:90 }.................: 7499   49.96992/s
+      { slice:95 }.................: 7500   49.976583/s
+
+    EXECUTION
+    dropped_iterations.............: 1128   7.516478/s
+    iteration_duration.............: avg=7.19ms   p(99)=62.61ms  max=4.05s   
+    iterations.....................: 223873 1491.787684/s
+    vus............................: 1      min=1             max=865 
+    vus_max........................: 1112   min=200           max=1112
+
+    NETWORK
+    data_received..................: 189 MB 1.3 MB/s
+    data_sent......................: 118 MB 785 kB/s
+
+
+
