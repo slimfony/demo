@@ -153,7 +153,6 @@ Next:
 
 1. **More runs of the benchmark**: a second machine, more importers than eight, the importers on their own cores.
 2. **The relay on its own**: how many outbox messages per second it publishes, and whether publishing several at once (not waiting for each acknowledgement) is worth it.
-3. **A smaller starting point**: a `slimfony/starter-template` repository, as described above.
 
 ## License
 
