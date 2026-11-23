@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-23
+
+### Fixed
+- The image contains slimfony/core 1.0.5. The lock file of 1.1.0 still pinned 1.0.1, so the fixes of the core's 1.0.2 to 1.0.5 (a lock timeout is retried, the readiness probe closes a dead connection, no body for `204`, passwords in log texts are masked, a connect failure that cannot get better is not repeated) were not in the image.
+
 ## [1.1.0] - 2026-11-23
 
 ### Page
@@ -135,7 +140,8 @@ First release: a complete service on slimfony/core 0.3.0, started with one `dock
 - **Metrics** of the API, the relay and every importer, scraped by Prometheus; Grafana panels for all of them.
 - **Quality:** PHPStan at max level, PER-CS, behavioural tests (also against a real PostgreSQL), an end-to-end script that starts the stack and checks it, CI on GitHub Actions.
 
-[Unreleased]: https://github.com/slimfony/demo/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/slimfony/demo/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/slimfony/demo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/slimfony/demo/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/slimfony/demo/compare/v0.7.0...v1.0.0
 [0.7.0]: https://github.com/slimfony/demo/compare/v0.6.0...v0.7.0

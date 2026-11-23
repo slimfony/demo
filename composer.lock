@@ -468,16 +468,16 @@
         },
         {
             "name": "slimfony/core",
-            "version": "v1.0.1",
+            "version": "v1.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/slimfony/core.git",
-                "reference": "b6e2a8c7599bad7e2c6c1dd9fa25c7fbf40acc28"
+                "reference": "ea6a96848617d9265741239096ae11e13e1812fe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/slimfony/core/zipball/b6e2a8c7599bad7e2c6c1dd9fa25c7fbf40acc28",
-                "reference": "b6e2a8c7599bad7e2c6c1dd9fa25c7fbf40acc28",
+                "url": "https://api.github.com/repos/slimfony/core/zipball/ea6a96848617d9265741239096ae11e13e1812fe",
+                "reference": "ea6a96848617d9265741239096ae11e13e1812fe",
                 "shasum": ""
             },
             "require": {
@@ -538,10 +538,10 @@
             ],
             "support": {
                 "issues": "https://github.com/slimfony/core/issues",
-                "source": "https://github.com/slimfony/core/tree/v1.0.1"
+                "source": "https://github.com/slimfony/core/tree/v1.0.5"
             },
-            "time": "2026-11-19T12:35:01+00:00",
-            "published-time": "2026-11-19T12:36:32+00:00"
+            "time": "2026-11-23T08:16:18+00:00",
+            "published-time": "2026-11-23T08:18:18+00:00"
         },
         {
             "name": "symfony/dependency-injection",
@@ -2060,16 +2060,16 @@
         },
         {
             "name": "phpstan/phpstan-strict-rules",
-            "version": "2.1.1",
+            "version": "2.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-strict-rules.git",
-                "reference": "fe4a0afae773eedf178fab17ed9361c0061d2804"
+                "reference": "c250a77b36059007de360f28522f0e7b687b8572"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan-strict-rules/zipball/fe4a0afae773eedf178fab17ed9361c0061d2804",
-                "reference": "fe4a0afae773eedf178fab17ed9361c0061d2804",
+                "url": "https://api.github.com/repos/phpstan/phpstan-strict-rules/zipball/c250a77b36059007de360f28522f0e7b687b8572",
+                "reference": "c250a77b36059007de360f28522f0e7b687b8572",
                 "shasum": ""
             },
             "require": {
@@ -2106,10 +2106,10 @@
             ],
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-strict-rules/issues",
-                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.1.1"
+                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.1.2"
             },
-            "time": "2026-11-02T08:16:15+00:00",
-            "published-time": "2026-11-02T10:55:07+00:00"
+            "time": "2026-11-23T09:01:11+00:00",
+            "published-time": "2026-11-23T09:02:01+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
