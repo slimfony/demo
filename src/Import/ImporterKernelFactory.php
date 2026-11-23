@@ -47,7 +47,7 @@ final class ImporterKernelFactory
         $stages = $metrics->histogram('import_stage_seconds', 'Time of one stage of importing a batch (claim, unzip, parse, write, finish; events is the notifications to the page).', ['stage']);
         $ackWait = $this->env->int('IMPORT_ACK_WAIT_SECONDS', 60); // how long the broker waits for an acknowledgement before it delivers a message again
         $importer = new BatchImporter(
-            new ImportRepository($connection, $ackWait + 30), // a batch still `running` after this long was abandoned
+            new ImportRepository($connection, $ackWait + ImportRepository::GRACE_SECONDS), // a batch still `running` after this long was abandoned
             new ArchiveReader(),
             new CamtParser($this->projectDir . '/schema/camt.053.001.02.xsd'),
             new StatementRules(),

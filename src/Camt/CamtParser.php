@@ -28,6 +28,15 @@ final class CamtParser
         }
 
         $dom = $this->load($xml, $file);
+        try {
+            return $this->read($dom, $file);
+        } catch (\UnexpectedValueException|\InvalidArgumentException $e) { // what the reduced schema lets through but the reading cannot use: an optional element that is needed, an amount of another shape
+            throw new StatementRejected(StatementRejected::SCHEMA_INVALID, $file, mb_substr($e->getMessage(), 0, 200));
+        }
+    }
+
+    private function read(\DOMDocument $dom, string $file): Statement
+    {
         $xpath = new \DOMXPath($dom);
         $xpath->registerNamespace('c', self::NAMESPACE);
 
@@ -77,7 +86,11 @@ final class CamtParser
         try {
             $dom = new \DOMDocument();
             // LIBXML_NONET: never touch the network. Entities are not substituted (no LIBXML_NOENT) and DOCTYPE was refused above.
-            if (!$dom->loadXML($xml, \LIBXML_NONET) || !$dom->schemaValidate($this->schemaPath)) {
+            // the text check above cannot see a DOCTYPE in a UTF-16 document, the parsed document can
+            if ($dom->loadXML($xml, \LIBXML_NONET) && null !== $dom->doctype) {
+                throw new StatementRejected(StatementRejected::UNSAFE_DOCUMENT, $file, 'A document type declaration is not accepted.');
+            }
+            if (null === $dom->documentElement || !$dom->schemaValidate($this->schemaPath)) {
                 $errors = libxml_get_errors();
                 $first = $errors[0] ?? null;
                 throw new StatementRejected(
@@ -96,7 +109,7 @@ final class CamtParser
 
     private function text(\DOMXPath $xpath, string $expression, ?\DOMElement $context = null): string
     {
-        return $this->optional($xpath, $expression, $context) ?? throw new \UnexpectedValueException('A required element is missing after schema validation: ' . $expression);
+        return $this->optional($xpath, $expression, $context) ?? throw new \UnexpectedValueException('A required element is missing: ' . $expression);
     }
 
     /**

@@ -22,6 +22,11 @@ final class LoadRunRepository
      */
     public function create(Connection $connection, string $id, int $requests, string $endpoint): bool
     {
+        // Checking and inserting are two statements: a lock held until the end of the transaction makes concurrent creators take turns,
+        // and the one that cannot get it is told a run is going (the other one is just starting it).
+        if (true !== $connection->fetchOne("SELECT pg_try_advisory_xact_lock(hashtext('load_runs'))")) {
+            return false;
+        }
         $busy = $connection->fetchOne(
             "SELECT 1 FROM load_runs WHERE status <> 'done' AND created_at > now() - make_interval(secs => ?)",
             [self::STALE_SECONDS],

@@ -24,7 +24,7 @@ $env:BUILDX_BAKE_ENTITLEMENTS_FS = "0"
 docker compose up -d --build --wait
 ```
 
-The page's *Runtime* table shows which version of the demo runs. A plain build shows the latest release from the changelog (`0.5.1`), with `+dev` when the changelog lists changes that are not released yet; to show something else, pass it: `APP_VERSION=my-build docker compose up -d --build --wait`.
+The page's *Runtime* table shows which version of the demo runs. A plain build shows the latest release from the changelog (for example `1.0.0`), with `+dev` when the changelog lists changes that are not released yet; to show something else, pass it: `APP_VERSION=my-build docker compose up -d --build --wait`.
 
 | What | Where |
 | --- | --- |
@@ -51,7 +51,7 @@ Docker needs about 3 GB of memory for this stack.
 - **Import.** Press *Start import*: the server generates up to 1,000 ZIPs of 10 statements each and uploads them to the API (19 in 20 with a token, the rest through the anonymous sandbox). The run lives on the server, so a reload of the page (or a second visitor) joins it instead of losing it. One tile per ZIP shows where it is: waiting, importing, booked, booked with rejected statements, rolled back, refused. A shield marks the uploads that came with a verified token. Numbers, a result card and a live log of the services follow.
 - **Chaos.** While an import runs, kill an importer in the middle of a batch or cut the database connections. Every ZIP still ends up booked, or failed with the reason on record; none stays waiting. "Account contention: high" spreads the statements over six accounts, so the importers meet on the same rows and the deadlocks multiply.
 - **Tokens and keys.** Send a ZIP with a valid or a broken token and see why it is refused. Rotate the identity provider's signing key and see the API pick up the new one.
-- **Send requests.** The browser sends a few thousand requests to the API as fast as it can.
+- **Send requests.** Pick `/healthz` or `/api/runtime` and a number up to 200,000: the server (the `generator` service) sends them to the API over six connections as fast as it can and shows the rate and the p50, p95 and p99 latency. The run lives on the server like an import.
 - **Live** (requests per second and latency from Prometheus), **Batches** (the latest ZIPs), **Present** (a big-screen view) and a short guided tour.
 
 ## The demo case: importing bank statements
@@ -72,7 +72,7 @@ The statements come from a generator that makes valid files and, on request, fil
 
 | Service | Role |
 | --- | --- |
-| `web` | FrankenPHP with 4 PHP workers, serves the API and the static page |
+| `web` | FrankenPHP with 18 PHP threads (`PHP_THREADS`), 16 of them running the worker script (`PHP_WORKERS`); serves the API and the static page |
 | `postgres` + `pgbouncer` | database, reached through a transaction pooler |
 | `idp` | small identity provider: publishes its keys (JWKS) over HTTPS and hands out demo tokens |
 | `relay` | command line process that publishes the outbox rows to NATS JetStream (several can run side by side), and announces batches that were forgotten again (the sweeper) |
@@ -88,17 +88,20 @@ The containers run as a non-root user, with a read-only file system, no capabili
 
 | Route | Purpose |
 | --- | --- |
-| `GET /healthz`, `/readyz` | liveness and readiness (database, NATS, Prometheus) |
+| `GET /healthz`, `/readyz` | liveness, and readiness (the database; `/api/status` reports NATS and Prometheus as well) |
 | `GET /metrics` | Prometheus metrics, bearer token required |
 | `GET /api/runtime` | PHP, JIT, server and core versions, uptime, memory |
 | `GET /api/status` | state of every dependency |
 | `GET /api/stats` | requests per second, p99 and total, read from Prometheus |
 | `GET /api/sample.zip?seed=&files=&fault_rate=&fault=` | a ZIP of generated CAMT.053 statements (the same seed gives the same ZIP; some can be made wrong on purpose) |
-| `GET /api/batches`, `GET /api/import/summary` | the latest batches, and what the importers have done so far (public) |
+| `GET /api/batches`, `GET /api/import/summary`, `GET /api/import/run?since=` | the latest batches, what the importers have done so far, and where every batch uploaded since a given moment stands (public) |
+| `POST /api/import/runs`, `GET /api/import/runs/latest` | ask for a run of the page's import (JSON with `zips` 1-1000, `faults` 0-1, `mode`, `accounts` 1-500, `lock_order`; the `generator` uploads the ZIPs; 409 while a run is going), and follow the latest run (public) |
+| `POST /api/load/runs`, `GET /api/load/runs/latest` | ask for a run of the page's "Send requests" (JSON with `requests` 1-200,000 and `endpoint` `/healthz` or `/api/runtime`; 409 while a run is going), and follow the latest run (public) |
+| `POST /api/chaos/kill-importer`, `POST /api/chaos/cut-connections` | break things on purpose; need scope `chaos:write`, and answer 404 unless `CHAOS_ENABLED` is set (the compose file sets it, the Kubernetes manifests do not) |
 | `POST /api/demo-rotate` | the identity provider starts signing with a new key |
 | `POST /api/demo-token?kind=…` | a token from the demo identity provider: `valid`, `expired`, `bad_signature`, `wrong_audience` or `missing_scope` |
-| `POST /api/imports?mode=partial\|strict` | upload a ZIP of statements; needs a valid token with scope `import:write` |
-| `POST /public/drop` | the same upload without a token: anonymous sandbox with tighter limits |
+| `POST /api/imports?mode=partial\|strict&lock_order=sorted\|appearance` | upload a ZIP of statements; needs a valid token with scope `import:write`. `lock_order` is how the importer locks the account rows: `sorted` (default) in a fixed order, `appearance` in the order the entries come, which makes the deadlocks visible |
+| `POST /public/drop` | the same upload without a token: anonymous sandbox with tighter limits (at most 1,200 uploads per minute and client, `SANDBOX_RATE_LIMIT`) |
 | `GET /api/batches/{id}` | state of an upload; needs scope `import:read` |
 
 Every route needs a verified token unless it is marked public (deny by default); a request for an unknown path gets 401 as well, so a stranger cannot map the API. An accepted upload is stored together with an outbox row in one transaction; the batch records whether it came with a token (`jwt`), who sent it and which key vouched for it, or came from the sandbox (`public`). The demo identity provider gives tokens to anybody: that is the demo, a real provider authenticates first.
@@ -143,7 +146,7 @@ npx playwright test    # the page in a real browser, against the running stack
 
 ## Status
 
-Version 1.0.0 (see [CHANGELOG.md](CHANGELOG.md)), on slimfony/core 1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay with its sweeper, the importers (`partial` and `strict` mode, ordered locking), the chaos switches, the page with the live import view, the benchmarks, the Kubernetes manifests and the template script work, and are exercised by the tests, by `scripts/e2e.sh` and by a browser test in CI.
+Version 1.1.0 (see [CHANGELOG.md](CHANGELOG.md)), on slimfony/core 1.0. The stack, the API, authentication with key rotation, both upload paths, the outbox relay with its sweeper, the importers (`partial` and `strict` mode, ordered locking), the chaos switches, the page with the live import view, the benchmarks, the Kubernetes manifests and the template script work, and are exercised by the tests, by `scripts/e2e.sh` and by a browser test in CI.
 
 The numbers on the page and in the benchmarks come from one laptop-class machine running everything in Docker. They show how the pieces behave and how a change moves them; they are not a capacity figure for a cluster.
 

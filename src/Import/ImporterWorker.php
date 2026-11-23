@@ -70,9 +70,9 @@ final class ImporterWorker
             return;
         }
 
-        $this->publish('batch', ['id' => $batchId, 'state' => 'running', 'worker' => $this->worker]);
         try {
-            $result = $this->importer->import($batchId, $this->worker);
+            // announced once the batch is ours: a repeated delivery of a finished batch must not flip its tile back to importing
+            $result = $this->importer->import($batchId, $this->worker, fn() => $this->publish('batch', ['id' => $batchId, 'state' => 'running', 'worker' => $this->worker]));
         } catch (\Throwable $e) {
             $delivered = DeliveryCount::fromReplySubject($replyTo);
             if ($delivered < self::MAX_DELIVER) {

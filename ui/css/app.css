@@ -12,8 +12,10 @@
   --text: #1d1d1f;
   --text-2: #6e6e73;
   --line: #d2d2d7;
-  --accent: #0071e3;
-  --ok: #248a3d;
+  --accent: #0066cc;
+  --accent-fill: var(--accent); /* the background of filled buttons: white text on it is at least 4.5:1 in both themes */
+  --series-2: #9b3fcf; /* the second line of a chart: never the colour of a tile state */
+  --ok: #1f7a37;
   --bad: #d70015;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI", system-ui, sans-serif;
 }
@@ -27,6 +29,8 @@
     --text-2: #98989d;
     --line: #38383a;
     --accent: #2997ff;
+    --accent-fill: #0b66c8;
+    --series-2: #bf5af2;
     --ok: #30d158;
     --bad: #ff453a;
 }
@@ -104,10 +108,24 @@ label { display: grid; gap: 6px; font-size: 13px; color: var(--text-2); }
 select { appearance: none; font: inherit; font-size: 17px; color: var(--text); background: var(--grouped); border: 0; border-radius: 10px; padding: 10px 36px 10px 14px; min-width: 160px;
   background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
   background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
-.button { font: inherit; font-size: 17px; color: #fff; background: var(--accent); border: 0; border-radius: 980px; padding: 10px 22px; cursor: pointer; }
+.button { font: inherit; font-size: 17px; color: #fff; background: var(--accent-fill); border: 0; border-radius: 980px; padding: 10px 22px; cursor: pointer; }
 .button:hover { filter: brightness(1.08); }
 .button:active { filter: brightness(.92); }
 .button:disabled { opacity: .5; cursor: default; }
+select:disabled { opacity: .5; }
+
+/* a button that waits for an answer: disabled, relabelled by the script, and a spinner in front */
+button[aria-busy="true"]::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: 8px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; vertical-align: -.1em; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.note { margin: 12px 0 0; font-size: 15px; color: var(--text-2); }
+.note:empty { display: none; }
+.note.bad, .conn-note { color: var(--bad); }
+.conn-note { margin: 12px 0 0; font-size: 15px; }
+.conn-note[hidden] { display: none; }
+.stale { opacity: .55; }
+.icon { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.12em; margin-right: 6px; }
 .progress { height: 4px; margin-top: 24px; background: var(--grouped); border-radius: 2px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: var(--accent); transition: width .15s linear; }
 
@@ -127,4 +145,5 @@ select { appearance: none; font: inherit; font-size: 17px; color: var(--text); b
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .progress-bar { transition: none; }
+  button[aria-busy="true"]::before { animation: none; }
 }

@@ -15,6 +15,7 @@ use Demo\Imports\Archive;
 use Demo\Imports\BatchRepository;
 use Demo\Imports\ImportMode;
 use Demo\Imports\ImportSource;
+use Demo\Outbox\StaleBatchSweeper;
 use Demo\Tests\Support\PostgresTestCase;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\DriverException;
@@ -103,5 +104,22 @@ final class BatchRecoveryTest extends PostgresTestCase
         self::assertSame(0, $this->rows('import_errors'), 'the statement that was already booked is not reported as a duplicate');
         self::assertSame(10, $this->rows('statements'));
         self::assertSame('done', $this->batchStatus($id));
+    }
+
+    public function testTheBatchOfAKilledImporterIsAnnouncedAndTakenAgainWithinHalfAMinuteOrSo(): void
+    {
+        // what compose.yaml sets: the broker waits 15 seconds for an acknowledgement, the importer gives a batch 15 more, the relay sweeps after 35
+        $importers = new ImportRepository($this->connection, 15 + ImportRepository::GRACE_SECONDS);
+        $sweeper = new StaleBatchSweeper(new Retry($this->connection), 35);
+        $id = $this->queue($this->generator->files(1, 3));
+        $importers->claim($id, 'killed');
+
+        $this->connection->executeStatement("UPDATE batches SET started_at = now() - interval '20 seconds' WHERE id = ?", [$id]);
+        self::assertSame(0, $sweeper->sweep(), 'a batch an importer may still be working on is left alone');
+        self::assertNull($importers->claim($id, 'w2'), 'and a second importer does not start on it');
+
+        $this->connection->executeStatement("UPDATE batches SET started_at = now() - interval '36 seconds' WHERE id = ?", [$id]);
+        self::assertSame(1, $sweeper->sweep(), 'once it can be taken, it is announced');
+        self::assertNotNull($importers->claim($id, 'w2'), 'and the importer that gets the announcement takes it');
     }
 }

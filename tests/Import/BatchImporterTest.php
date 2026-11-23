@@ -22,6 +22,7 @@ use Demo\Imports\LockOrder;
 use Demo\Imports\RejectedUpload;
 use Demo\Tests\Support\InMemoryStorage;
 use Demo\Tests\Support\PostgresTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Slimfony\Core\Database\Retry;
 use Slimfony\Core\Observability\MetricsRegistry;
 
@@ -237,5 +238,118 @@ final class BatchImporterTest extends PostgresTestCase
         foreach (['claim', 'unzip', 'parse', 'write', 'finish'] as $stage) {
             self::assertStringContainsString('import_stage_seconds_count{stage="' . $stage . '"} 1', $registry->render());
         }
+    }
+
+    /**
+     * @return iterable<string, array{string, string}> a statement the schema lets through but that cannot be booked, and the reason it gets
+     */
+    public static function unbookable(): iterable
+    {
+        yield 'no currency' => ['no_currency', StatementRejected::SCHEMA_INVALID];
+        yield 'an amount of zero' => ['zero_amount', StatementRejected::SCHEMA_INVALID];
+        yield 'an amount of 18 digits' => ['huge_amount', StatementRejected::SCHEMA_INVALID];
+    }
+
+    /**
+     * Ten good statements, with the one at index 4 changed the way the schema does not notice.
+     *
+     * @return array<string, string>
+     */
+    private function tenWithOneUnbookable(string $kind): array
+    {
+        $files = $this->generator->files(1, 10);
+        $xml = array_values($this->generator->files(2, 1))[0];
+        $first = '~(<Ntry><NtryRef>[^<]*</NtryRef><Amt Ccy="EUR">)[^<]*~';
+        $files[array_keys($files)[4]] = match ($kind) {
+            'no_currency' => str_replace('<Ccy>EUR</Ccy>', '', $xml),
+            'zero_amount' => (string) preg_replace($first, '${1}0.00', $xml, 1),
+            default => (string) preg_replace($first, '${1}123456789012345678', $xml, 1),
+        };
+
+        return $files;
+    }
+
+    #[DataProvider('unbookable')]
+    public function testInPartialModeAStatementThatCannotBeBookedIsRejectedAndTheRestOfTheZipIsBooked(string $kind, string $reason): void
+    {
+        $id = $this->queue($this->tenWithOneUnbookable($kind));
+
+        $result = $this->importer->import($id, 'w1');
+
+        self::assertNotNull($result);
+        self::assertSame([ImportResult::DONE, 9, 1], [$result->status, $result->statementsOk, $result->statementsFailed]);
+        self::assertSame(9, $this->rows('statements'));
+        self::assertSame(['file' => 'statement-05.xml', 'reason' => $reason], $this->connection->fetchAssociative('SELECT file, reason FROM import_errors'));
+        self::assertSame('done', $this->connection->fetchOne('SELECT status FROM batches WHERE id = ?', [$id]));
+    }
+
+    #[DataProvider('unbookable')]
+    public function testInStrictModeAStatementThatCannotBeBookedRollsBackTheZipWithItsReason(string $kind, string $reason): void
+    {
+        $result = $this->importer->import($this->queue($this->tenWithOneUnbookable($kind), ImportMode::Strict), 'w1');
+
+        self::assertNotNull($result);
+        self::assertSame([ImportResult::FAILED, 0, 1, 9], [$result->status, $result->statementsOk, $result->statementsFailed, $result->rolledBack]);
+        self::assertSame(0, $this->rows('statements'));
+        self::assertSame(1, $this->rows('import_errors', "reason = '$reason'"));
+    }
+
+    public function testACreditThatDoesNotFitTheAccountBalanceRejectsOnlyItsStatement(): void
+    {
+        $parser = new CamtParser(__DIR__ . '/../../schema/camt.053.001.02.xsd');
+        $files = $this->generator->files(1, 10);
+        $full = null;
+        foreach (array_keys($files) as $name) {
+            $statement = $parser->parse($files[$name], $name);
+            if ($statement->entriesCents() > 0) {
+                $full = $statement;
+                break;
+            }
+        }
+        self::assertNotNull($full, 'a statement that adds money');
+        $this->connection->executeStatement('UPDATE accounts SET booked_balance = 9999999999999999.00 WHERE iban = ?', [$full->iban]);
+
+        foreach ([ImportMode::Partial, ImportMode::Strict] as $mode) {
+            $result = $this->importer->import($this->queue($files, $mode), 'w1');
+
+            self::assertNotNull($result, $mode->value);
+            if (ImportMode::Partial === $mode) { // the statements that do not touch the full account are booked, the others are accounted for
+                self::assertSame([ImportResult::DONE, 10], [$result->status, $result->statementsOk + $result->statementsFailed]);
+                self::assertGreaterThan(0, $result->statementsOk);
+            } else {
+                self::assertSame([ImportResult::FAILED, 0], [$result->status, $result->statementsOk]);
+            }
+            self::assertSame(StatementRejected::SCHEMA_INVALID, $this->connection->fetchOne("SELECT reason FROM import_errors WHERE file = ? AND reason <> 'rolled_back'", [$full->file]), $mode->value);
+            $this->connection->executeStatement('DELETE FROM entries; DELETE FROM statements; DELETE FROM import_errors');
+        }
+    }
+
+    public function testARunThatDiedAfterRecordingItsErrorsDoesNotRecordThemTwice(): void
+    {
+        $id = $this->queue($this->tenWithOneWrong(StatementRejected::BALANCE_MISMATCH), ImportMode::Strict);
+        self::assertNotNull($this->importer->import($id, 'w1'));
+        // the importer died between writing the errors and closing the batch: the batch is abandoned and is taken again
+        $this->connection->executeStatement("UPDATE batches SET status = 'running', finished_at = NULL, started_at = now() - interval '5 minutes' WHERE id = ?", [$id]);
+
+        $result = $this->importer->import($id, 'w2');
+
+        self::assertNotNull($result);
+        self::assertSame(10, $this->rows('import_errors'), 'one balance_mismatch and nine rolled_back, as after the first run');
+        self::assertSame(9, $this->connection->fetchOne('SELECT statements_rolled_back FROM batches WHERE id = ?', [$id]));
+    }
+
+    public function testTheWorkerIsToldWhenTheBatchIsItsAndOnlyThen(): void
+    {
+        $id = $this->queue($this->generator->files(1, 3));
+        $told = 0;
+
+        self::assertNotNull($this->importer->import($id, 'w1', static function () use (&$told): void {
+            ++$told;
+        }));
+        self::assertNull($this->importer->import($id, 'w2', static function () use (&$told): void {
+            ++$told;
+        }), 'a repeated delivery of a finished batch');
+
+        self::assertSame(1, $told);
     }
 }

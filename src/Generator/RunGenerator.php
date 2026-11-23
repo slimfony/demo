@@ -25,8 +25,12 @@ final class RunGenerator
     /** @var \Closure(string, string, array<string, string>): array{int, string} */
     private readonly \Closure $post;
 
+    /** @var \Closure(): float */
+    private readonly \Closure $now;
+
     /**
      * @param (\Closure(string, string, array<string, string>): array{int, string})|null $post url, body and headers in; status and body out
+     * @param (\Closure(): float)|null                                                    $now  seconds since the epoch; defaults to microtime(true)
      */
     public function __construct(
         private readonly Connection $connection,
@@ -36,8 +40,10 @@ final class RunGenerator
         private readonly string $apiUrl,
         private readonly ?LoggerInterface $logger = null,
         ?\Closure $post = null,
+        ?\Closure $now = null,
     ) {
         $this->post = $post ?? self::send(...);
+        $this->now = $now ?? static fn(): float => microtime(true);
     }
 
     /**
@@ -53,7 +59,9 @@ final class RunGenerator
 
         $token = $this->tokens->token('valid');
         $tokenAt = hrtime(true) / 1e9;
-        $seedBase = (int) (microtime(true) * 1000) % 900_000_000 + 1;
+        // a statement id contains its seed and is unique in the database for good: the seeds of a run are its start in milliseconds
+        // times a thousand (a run has at most a thousand ZIPs), so no two runs ever share one (the sandbox's sample seeds are far below)
+        $seedBase = (int) (($this->now)() * 1000) * 1000;
 
         for ($index = 0; $index < $run['zips']; ++$index) {
             if (hrtime(true) / 1e9 - $tokenAt > self::TOKEN_REFRESH_SECONDS) {

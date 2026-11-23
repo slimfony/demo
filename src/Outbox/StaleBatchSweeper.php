@@ -14,14 +14,16 @@ use Slimfony\Core\Database\Retry;
  * deliveries, an importer died with it, the stream was lost), the database still knows the batch is not finished.
  *
  * Announcing a batch twice is harmless: an importer that finds it taken or finished only acknowledges the message.
- * The delay must be longer than the importers' own timeouts (60 seconds for a delivery, 90 for an abandoned batch),
- * or the sweeper would announce batches that are simply being worked on.
+ * The delay must be longer than the importers' own timeouts (60 seconds for a delivery, 75 for an abandoned batch),
+ * or the sweeper would announce a batch while it is still being worked on and the importer would take no notice of it
+ * (the batch would then wait for the next announcement). A killed importer's batch is back about one delay (and up to
+ * one sweep tick, ten seconds) after it was started.
  */
 final class StaleBatchSweeper
 {
     public function __construct(
         private readonly Retry $retry,
-        private readonly int $afterSeconds = 120,
+        private readonly int $afterSeconds = 80,
     ) {
         if ($afterSeconds < 1) {
             throw new \InvalidArgumentException('The delay must be at least one second.');

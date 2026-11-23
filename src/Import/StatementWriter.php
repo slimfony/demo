@@ -11,6 +11,7 @@ use Demo\Camt\StatementRejected;
 use Demo\Imports\LockOrder;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\DriverException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 /**
@@ -109,11 +110,20 @@ final class StatementWriter
         }
 
         $balance = Money::format($statement->entriesCents());
-        if (LockOrder::Sorted === $order) {
-            $this->updateBalanceAndStatistics($connection, $statement, $balance);
-        } else {
-            $connection->executeStatement('UPDATE accounts SET booked_balance = booked_balance + ?, last_statement_at = now() WHERE iban = ?', [$balance, $statement->iban]);
-            $this->updateStatisticsOneByOne($connection, $statement);
+
+        try {
+            if (LockOrder::Sorted === $order) {
+                $this->updateBalanceAndStatistics($connection, $statement, $balance);
+            } else {
+                $connection->executeStatement('UPDATE accounts SET booked_balance = booked_balance + ?, last_statement_at = now() WHERE iban = ?', [$balance, $statement->iban]);
+                $this->updateStatisticsOneByOne($connection, $statement);
+            }
+        } catch (DriverException $e) {
+            if ('22003' !== $e->getSQLState()) { // numeric_value_out_of_range: the balance would not fit the column
+                throw $e;
+            }
+
+            throw new StatementRejected(StatementRejected::SCHEMA_INVALID, $statement->file, 'The statement would take the account balance beyond what the account can hold.', $statement->id);
         }
 
         return \count($statement->entries);

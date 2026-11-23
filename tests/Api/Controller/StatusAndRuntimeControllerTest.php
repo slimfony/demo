@@ -45,7 +45,8 @@ final class StatusAndRuntimeControllerTest extends TestCase
 
         self::assertIsArray($body);
         self::assertSame(\PHP_VERSION, $body['php']);
-        self::assertSame('v1.0.0', $body['core']);
+        self::assertIsString($body['core']);
+        self::assertMatchesRegularExpression('/^v\d+\.\d+\.\d+$/', $body['core']); // whichever release is installed
         self::assertFalse($body['worker_mode'], 'only the worker script (public/index.php) says it runs the worker loop');
         self::assertIsBool($body['jit']);
         self::assertIsInt($body['memory_bytes']);

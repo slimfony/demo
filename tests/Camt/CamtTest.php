@@ -110,4 +110,55 @@ final class CamtTest extends TestCase
             self::assertSame(StatementRejected::TOO_LARGE, $e->reason);
         }
     }
+
+    public function testADocumentTypeDeclarationHiddenInAnotherEncodingIsRefusedToo(): void
+    {
+        $evil = mb_convert_encoding('<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE d [<!ENTITY x "y">]><Document>&x;</Document>', 'UTF-16LE', 'UTF-8');
+
+        try {
+            $this->parser()->parse("\xFF\xFE" . $evil, 'evil.xml');
+            self::fail('The file should have been refused.');
+        } catch (StatementRejected $e) {
+            self::assertSame(StatementRejected::UNSAFE_DOCUMENT, $e->reason);
+        }
+    }
+
+    public function testWhatTheSchemaAllowsButTheReadingCannotUseIsRejectedNotThrown(): void
+    {
+        $good = array_values(new StatementGenerator()->files(1, 1))[0];
+        $variants = [
+            'a statement without a currency' => str_replace('<Ccy>EUR</Ccy>', '', $good),
+            'an amount of 18 digits' => $this->withFirstAmount($good, '123456789012345678'),
+            'an amount with a plus sign' => $this->withFirstAmount($good, '+5.00'),
+        ];
+
+        foreach ($variants as $what => $xml) {
+            try {
+                $this->parser()->parse($xml, 'test.xml');
+                self::fail("$what should have been rejected.");
+            } catch (StatementRejected $e) {
+                self::assertSame(StatementRejected::SCHEMA_INVALID, $e->reason, $what);
+            }
+        }
+    }
+
+    public function testAnEntryOfZeroOrOfMoreThanTheLimitIsRejectedByTheRules(): void
+    {
+        $good = array_values(new StatementGenerator()->files(1, 1))[0];
+
+        foreach (['0.00', '100000000000001.00'] as $amount) {
+            try {
+                $this->accept($this->withFirstAmount($good, $amount));
+                self::fail("The amount $amount should have been rejected.");
+            } catch (StatementRejected $e) {
+                self::assertSame(StatementRejected::SCHEMA_INVALID, $e->reason, $amount);
+                self::assertNotNull($e->statementId);
+            }
+        }
+    }
+
+    private function withFirstAmount(string $xml, string $amount): string
+    {
+        return (string) preg_replace('~(<Ntry><NtryRef>[^<]*</NtryRef><Amt Ccy="EUR">)[^<]*~', '${1}' . $amount, $xml, 1);
+    }
 }

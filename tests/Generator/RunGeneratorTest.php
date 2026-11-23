@@ -6,7 +6,9 @@ namespace Demo\Tests\Generator;
 
 use Demo\Camt\StatementGenerator;
 use Demo\Generator\RunGenerator;
+use Demo\Import\ArchiveReader;
 use Demo\Imports\ImportMode;
+use Demo\Imports\ImportSource;
 use Demo\Imports\LockOrder;
 use Demo\Imports\RunRepository;
 use Demo\Infrastructure\Idp\HttpTokenSource;
@@ -116,5 +118,34 @@ final class RunGeneratorTest extends PostgresTestCase
         self::assertNull($latest['items'][0]['status'], 'its batch is not in the table (yet): the page shows it as waiting');
         self::assertSame('done', $latest['items'][1]['status']);
         self::assertSame(7, $latest['items'][1]['statements_ok']);
+    }
+
+    public function testNoTwoRunsEverUseTheSameStatementIds(): void
+    {
+        $ids = [];
+        $start = 1_800_000_000.0;
+        // the old seeds wrapped after 900,000,000 ms: the third run starts exactly that long after the first
+        foreach ([$start, $start + 0.5, $start + 900_000.0, $start + 900_000.5] as $n => $at) {
+            self::assertTrue($this->runs->create($this->connection, \sprintf('11111111-1111-4111-8111-%012d', $n), 2, 0.0, ImportMode::Partial, 60, LockOrder::Sorted));
+            $generator = new RunGenerator(
+                $this->connection,
+                $this->runs,
+                new StatementGenerator(),
+                new HttpTokenSource('https://idp.test', static fn(string $url): string => '{"token":"t"}'),
+                'http://api.test',
+                post: static function (string $url, string $body) use (&$ids): array {
+                    foreach (new ArchiveReader()->read($body, ImportSource::Jwt->limits()) as $xml) {
+                        $ids[] = 1 === preg_match('~<Stmt><Id>([^<]+)</Id>~', $xml, $match) ? $match[1] : '?';
+                    }
+
+                    return [202, '{"id":"00000000-0000-4000-8000-000000000000"}'];
+                },
+                now: static fn(): float => $at,
+            );
+            $generator->serveOne();
+        }
+
+        self::assertCount(4 * 2 * 10, $ids);
+        self::assertSame($ids, array_values(array_unique($ids)), 'every statement id is new, as the database requires');
     }
 }

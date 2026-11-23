@@ -6,7 +6,6 @@ export function setupPresent() {
   function set(on) {
     root.classList.toggle('present', on);
     button.setAttribute('aria-pressed', String(on));
-    button.textContent = on ? 'Exit' : 'Present';
     if (on) {
       window.scrollTo({ top: 0 });
       document.documentElement.requestFullscreen?.().catch(() => {}); // a full screen is nice to have, not needed

@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "basis-company/nats",
-            "version": "1.2.6",
+            "version": "1.2.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/basis-company/nats.php.git",
-                "reference": "52002aa9e5ee99bb761539df318dbe5a50fdf81c"
+                "reference": "ed5d8793b192c319865a4c473e3974da05b7c61b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/basis-company/nats.php/zipball/52002aa9e5ee99bb761539df318dbe5a50fdf81c",
-                "reference": "52002aa9e5ee99bb761539df318dbe5a50fdf81c",
+                "url": "https://api.github.com/repos/basis-company/nats.php/zipball/ed5d8793b192c319865a4c473e3974da05b7c61b",
+                "reference": "ed5d8793b192c319865a4c473e3974da05b7c61b",
                 "shasum": ""
             },
             "require": {
@@ -74,10 +74,10 @@
             ],
             "support": {
                 "issues": "https://github.com/basis-company/nats.php/issues",
-                "source": "https://github.com/basis-company/nats.php/tree/1.2.6"
+                "source": "https://github.com/basis-company/nats.php/tree/1.2.9"
             },
-            "time": "2026-11-09T08:30:48+00:00",
-            "published-time": "2026-11-09T08:36:52+00:00"
+            "time": "2026-11-22T13:12:51+00:00",
+            "published-time": "2026-11-22T13:13:51+00:00"
         },
         {
             "name": "doctrine/dbal",
@@ -468,16 +468,16 @@
         },
         {
             "name": "slimfony/core",
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/slimfony/core.git",
-                "reference": "21dc712f66cf4fa5663dec871bbeaa59df113a9d"
+                "reference": "b6e2a8c7599bad7e2c6c1dd9fa25c7fbf40acc28"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/slimfony/core/zipball/21dc712f66cf4fa5663dec871bbeaa59df113a9d",
-                "reference": "21dc712f66cf4fa5663dec871bbeaa59df113a9d",
+                "url": "https://api.github.com/repos/slimfony/core/zipball/b6e2a8c7599bad7e2c6c1dd9fa25c7fbf40acc28",
+                "reference": "b6e2a8c7599bad7e2c6c1dd9fa25c7fbf40acc28",
                 "shasum": ""
             },
             "require": {
@@ -538,10 +538,10 @@
             ],
             "support": {
                 "issues": "https://github.com/slimfony/core/issues",
-                "source": "https://github.com/slimfony/core/tree/v1.0.0"
+                "source": "https://github.com/slimfony/core/tree/v1.0.1"
             },
-            "time": "2026-11-18T13:19:28+00:00",
-            "published-time": "2026-11-18T13:20:37+00:00"
+            "time": "2026-11-19T12:35:01+00:00",
+            "published-time": "2026-11-19T12:36:32+00:00"
         },
         {
             "name": "symfony/dependency-injection",
@@ -1411,42 +1411,42 @@
         },
         {
             "name": "ergebnis/agent-detector",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ergebnis/agent-detector.git",
-                "reference": "bcc63004284c61c6df6e9625acf2673e3be1889b"
+                "reference": "ae2169d42024c6009abd0bb0aec5cf46c902fb1d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ergebnis/agent-detector/zipball/bcc63004284c61c6df6e9625acf2673e3be1889b",
-                "reference": "bcc63004284c61c6df6e9625acf2673e3be1889b",
+                "url": "https://api.github.com/repos/ergebnis/agent-detector/zipball/ae2169d42024c6009abd0bb0aec5cf46c902fb1d",
+                "reference": "ae2169d42024c6009abd0bb0aec5cf46c902fb1d",
                 "shasum": ""
             },
             "require": {
                 "php": "~7.4.0 || ~8.0.0 || ~8.1.0 || ~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0"
             },
             "require-dev": {
-                "ergebnis/composer-normalize": "^2.54.0",
-                "ergebnis/license": "^2.8.0",
+                "ergebnis/composer-normalize": "^2.56.1",
+                "ergebnis/license": "^2.9.0",
                 "ergebnis/php-cs-fixer-config": "^6.60.2",
-                "ergebnis/phpstan-rules": "^2.14.2",
+                "ergebnis/phpstan-rules": "^2.17.1",
                 "ergebnis/phpunit-slow-test-detector": "^2.27.0",
-                "ergebnis/rector-rules": "^1.18.5",
+                "ergebnis/rector-rules": "^1.19.0",
                 "fakerphp/faker": "^1.24.1",
                 "infection/infection": "^0.26.6",
                 "phpstan/extension-installer": "^1.4.3",
                 "phpstan/phpstan": "^2.2.14",
                 "phpstan/phpstan-deprecation-rules": "^2.0.5",
-                "phpstan/phpstan-phpunit": "^2.1.1",
-                "phpstan/phpstan-strict-rules": "^2.1.0",
+                "phpstan/phpstan-phpunit": "^2.1.2",
+                "phpstan/phpstan-strict-rules": "^2.1.1",
                 "phpunit/phpunit": "^9.6.34",
                 "rector/rector": "^2.7.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "2.0-dev"
+                    "dev-main": "2.1-dev"
                 },
                 "composer-normalize": {
                     "indent-size": 2,
@@ -1476,8 +1476,8 @@
                 "security": "https://github.com/ergebnis/agent-detector/blob/main/.github/SECURITY.md",
                 "source": "https://github.com/ergebnis/agent-detector"
             },
-            "time": "2026-10-29T17:44:55+00:00",
-            "published-time": "2026-10-29T17:49:41+00:00"
+            "time": "2026-11-19T13:07:04+00:00",
+            "published-time": "2026-11-19T13:08:21+00:00"
         },
         {
             "name": "evenement/evenement",
@@ -1936,11 +1936,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.3.6",
+            "version": "2.3.7",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/00cedebb76cc82c1592414fa4f616cefdccda16f",
-                "reference": "00cedebb76cc82c1592414fa4f616cefdccda16f",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/90c91c2498849ab8cc4e873864bbf1cb2bf6ea12",
+                "reference": "90c91c2498849ab8cc4e873864bbf1cb2bf6ea12",
                 "shasum": ""
             },
             "require": {
@@ -1996,8 +1996,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-15T19:58:26+00:00",
-            "published-time": "2026-11-15T19:58:39+00:00"
+            "time": "2026-11-19T10:31:11+00:00",
+            "published-time": "2026-11-19T10:31:27+00:00"
         },
         {
             "name": "phpstan/phpstan-phpunit",
@@ -2500,16 +2500,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "13.4.7",
+            "version": "13.4.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "e6458d44279e3b4fc492d4c41fe8e677efed7a2c"
+                "reference": "291e66a76eb39f2fb8f880d38edc30dbd7acd9a2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/e6458d44279e3b4fc492d4c41fe8e677efed7a2c",
-                "reference": "e6458d44279e3b4fc492d4c41fe8e677efed7a2c",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/291e66a76eb39f2fb8f880d38edc30dbd7acd9a2",
+                "reference": "291e66a76eb39f2fb8f880d38edc30dbd7acd9a2",
                 "shasum": ""
             },
             "require": {
@@ -2580,7 +2580,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/13.4.7"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/13.4.8"
             },
             "funding": [
                 {
@@ -2588,8 +2588,8 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-11-13T11:10:10+00:00",
-            "published-time": "2026-11-13T11:11:23+00:00"
+            "time": "2026-11-19T12:17:15+00:00",
+            "published-time": "2026-11-19T12:18:28+00:00"
         },
         {
             "name": "psr/event-dispatcher",

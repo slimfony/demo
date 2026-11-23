@@ -9,7 +9,7 @@ use Firebase\JWT\JWT;
 /** Signs demo tokens (EdDSA). The wrong ones are wrong in exactly one way, so each shows one defence of the api. */
 final class TokenIssuer
 {
-    private const int LIFETIME_SECONDS = 300;
+    public const int LIFETIME_SECONDS = 300;
     private const string SCOPE = 'import:write import:read chaos:write';
 
     /** @var \Closure(): int */

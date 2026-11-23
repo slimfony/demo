@@ -15,8 +15,11 @@ final class ImportRepository
         private readonly int $abandonedAfterSeconds = self::ABANDONED_AFTER_SECONDS,
     ) {}
 
-    /** Seconds after which a batch that is still `running` is taken to be abandoned (the broker redelivers its message after 60). */
-    public const int ABANDONED_AFTER_SECONDS = 90;
+    /** Seconds beyond the broker's wait for an acknowledgement after which a batch that is still `running` is taken to be abandoned: far more than an import takes, so two importers never work on one batch. */
+    public const int GRACE_SECONDS = 15;
+
+    /** The same for the broker's default wait of 60 seconds. */
+    public const int ABANDONED_AFTER_SECONDS = 75;
 
     /**
      * Takes a batch for this worker: a queued one, or one that a worker started and then abandoned. Null when it is not available
@@ -94,12 +97,22 @@ final class ImportRepository
         );
     }
 
-    /** Written on its own (outside the statement's transaction), so the row stays when the statement is rolled back. */
-    public function recordError(string $batchId, StatementRejected $error): void
+    /**
+     * The rejections of this run, written outside the statements' transactions, so the rows stay when a statement is rolled back.
+     * They replace what an earlier run of the batch wrote before it died: a rerun reports each rejection once.
+     *
+     * @param list<StatementRejected> $errors
+     */
+    public function recordErrors(string $batchId, array $errors): void
     {
-        $this->connection->executeStatement(
-            'INSERT INTO import_errors (batch_id, file, statement_id, reason, detail) VALUES (?, ?, ?, ?, ?)',
-            [$batchId, $error->document, $error->statementId, $error->reason, mb_substr($error->getMessage(), 0, 500)],
-        );
+        $this->connection->transactional(static function (Connection $connection) use ($batchId, $errors): void {
+            $connection->executeStatement('DELETE FROM import_errors WHERE batch_id = ?', [$batchId]);
+            foreach ($errors as $error) {
+                $connection->executeStatement(
+                    'INSERT INTO import_errors (batch_id, file, statement_id, reason, detail) VALUES (?, ?, ?, ?, ?)',
+                    [$batchId, $error->document, $error->statementId, $error->reason, mb_substr($error->getMessage(), 0, 500)],
+                );
+            }
+        });
     }
 }

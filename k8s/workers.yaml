@@ -28,7 +28,7 @@ spec:
             - { name: DB_PASSWORD_FILE, value: /secrets/db_password }
             - { name: METRICS_TOKEN_FILE, value: /secrets/metrics_token }
             - { name: MERCURE_KEY_FILE, value: /secrets/mercure_key }
-            - { name: SWEEP_AFTER_SECONDS, value: "120" } # longer than the importers' own timeouts
+            - { name: SWEEP_AFTER_SECONDS, value: "80" } # longer than the importers' own timeouts (60 s + 15 s)
           securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
           readinessProbe:
             tcpSocket: { port: metrics }

@@ -17,6 +17,7 @@ export function setupTour() {
   const close = document.getElementById('tour-close');
   let index = 0;
   let focused = null;
+  let opener = null; // where the focus goes back to when the tour ends
 
   function show(i) {
     index = i;
@@ -34,11 +35,23 @@ export function setupTour() {
   function stop() {
     focused?.classList.remove('tour-focus');
     card.hidden = true;
+    opener?.focus();
   }
 
-  document.getElementById('tour-start').addEventListener('click', () => { card.hidden = false; show(0); next.focus(); });
+  document.getElementById('tour-start').addEventListener('click', () => { opener = document.activeElement; card.hidden = false; show(0); next.focus(); });
   next.addEventListener('click', () => (index === STEPS.length - 1 ? stop() : show(index + 1)));
   back.addEventListener('click', () => show(Math.max(0, index - 1)));
   close.addEventListener('click', stop);
-  document.addEventListener('keydown', (event) => { if ('Escape' === event.key && !card.hidden) stop(); });
+  document.addEventListener('keydown', (event) => {
+    if (card.hidden) return;
+    if ('Escape' === event.key) stop();
+    if ('Tab' === event.key) { // the focus stays inside the dialog
+      const controls = [back, next, close].filter((button) => !button.disabled);
+      const edge = event.shiftKey ? controls[0] : controls[controls.length - 1];
+      if (document.activeElement === edge || !card.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? controls[controls.length - 1] : controls[0]).focus();
+      }
+    }
+  });
 }

@@ -7,11 +7,20 @@ namespace Demo\Camt;
 /** The business rules that need nothing but the statement itself (the ones that need the database are checked when it is written). */
 final class StatementRules
 {
+    /** The largest entry accepted, in cents: 500 of them (the schema's limit) and a balance cannot overflow an integer. */
+    private const int MAX_ENTRY_CENTS = 10_000_000_000_000_000;
+
     /**
      * @throws StatementRejected
      */
     public function check(Statement $statement): void
     {
+        foreach ($statement->entries as $entry) {
+            if ($entry->cents < 1 || $entry->cents > self::MAX_ENTRY_CENTS) {
+                throw new StatementRejected(StatementRejected::SCHEMA_INVALID, $statement->file, \sprintf('Entry %s has the amount %s; an amount is more than zero and at most %s.', $entry->reference, Money::format($entry->cents), Money::format(self::MAX_ENTRY_CENTS)), $statement->id);
+            }
+        }
+
         $expected = $statement->openingCents + $statement->entriesCents();
         if ($expected !== $statement->closingCents) {
             throw new StatementRejected(

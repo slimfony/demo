@@ -42,7 +42,7 @@ final class RelayKernelFactory
         $endpoint = $setup->metricsEndpoint($metrics);
         $worker = new RelayWorker(
             $relay,
-            new StaleBatchSweeper($retry, $this->env->int('SWEEP_AFTER_SECONDS', 120)),
+            new StaleBatchSweeper($retry, $this->env->int('SWEEP_AFTER_SECONDS', 80)),
             $endpoint,
             $logger,
             $metrics->counter('outbox_published_total', 'Outbox messages published to the broker.'),

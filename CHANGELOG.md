@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-23
+
+### Page
+- A failed or stalled run is shown as failed: the run card names what happened (done, stalled, lost contact, every ZIP refused) with its own colour and icon, a rejected import or push start shows a message and gives the button back, and the push loop stops waiting after 60 s without progress.
+- The chaos buttons look different from the plain ones and ask for a second click (they act for every visitor), are disabled with an explanation when the server has chaos turned off, and show how many kills are pending; rotating the signing key is disabled while it runs.
+- Options that cannot work together are settled for you: strict mode uses the sorted lock order, and the anonymous sandbox keeps the good statements, each with a hint.
+- The same thing is written the same way everywhere: one format for durations, rates, memory and latency, one wording for each outcome, mode and sender; a failed upload says why (network, rate limit, server error); empty tables say so.
+- The page says when the API stops answering or the live connection drops, and dims the numbers that are stale; busy workers have their own colour in the chart, the series are named in the legend, the axes have units and the time axis follows the server's clock.
+- Text and status colours meet a contrast of 4.5:1 in both themes; both progress bars and the tour dialog are announced properly to screen readers, and tile states are also written as text.
+
+### Changed
+- A batch that an importer abandoned (killed in the middle) is taken again after about 35 to 45 seconds instead of two minutes: an importer gives a batch 15 seconds more than the broker's wait for an acknowledgement (`IMPORT_ACK_WAIT_SECONDS` plus 15), and the sweeper announces it after 35 seconds in the compose file (`SWEEP_AFTER_SECONDS`; 80 seconds, the default and the Kubernetes value, with the broker's 60).
+- The README states what runs and what the API offers: `/readyz` checks the database only, the web service runs 18 PHP threads with 16 workers, and every route is listed, including the runs, the chaos switches and `lock_order`.
+
+### Fixed
+- A statement without an account currency, with an amount of 0.00 or with an amount the importer cannot read is rejected on its own with the reason `schema_invalid`; before, it released the whole ZIP, which was delivered again and again and ended as failed.
+- A statement whose entries would take an account balance beyond what the column holds is rejected on its own (`schema_invalid`), and an entry above 100 trillion is refused by the rules.
+- A document type declaration is refused in documents of any encoding (UTF-16 as well), not only when it is visible as text.
+- Rotating the signing key twice in a row (a double click) no longer drops the key that signed a token that is still valid: a key stays published until its tokens have expired, and rotations less than two seconds apart count as one.
+- Two requests that ask for a run (import or "Send requests") at the same moment no longer start two runs: one gets 409.
+- The statement ids of a long-running demo no longer repeat after ten days (`duplicate_statement` with the faults off).
+- An importer that dies between writing the rejections of a batch and closing it no longer doubles them when the batch is run again, so the number of rolled back statements stays right.
+- A batch that is announced again after it is finished no longer flips back to *importing* on its tile: the importer announces it only after it has taken it.
+
 ## [1.0.0] - 2026-11-18
 
 ### Changed
@@ -111,7 +135,8 @@ First release: a complete service on slimfony/core 0.3.0, started with one `dock
 - **Metrics** of the API, the relay and every importer, scraped by Prometheus; Grafana panels for all of them.
 - **Quality:** PHPStan at max level, PER-CS, behavioural tests (also against a real PostgreSQL), an end-to-end script that starts the stack and checks it, CI on GitHub Actions.
 
-[Unreleased]: https://github.com/slimfony/demo/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/slimfony/demo/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/slimfony/demo/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/slimfony/demo/compare/v0.7.0...v1.0.0
 [0.7.0]: https://github.com/slimfony/demo/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/slimfony/demo/compare/v0.5.1...v0.6.0

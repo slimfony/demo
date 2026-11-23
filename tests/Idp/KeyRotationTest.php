@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Demo\Tests\Idp;
 
-use Demo\Idp\InMemoryKeySet;
-use Demo\Idp\SigningKey;
+use Demo\Idp\ApcuKeyStore;
 use Demo\Idp\TokenIssuer;
 use Demo\Idp\TokenKind;
 use Firebase\JWT\JWK;
@@ -30,20 +29,56 @@ final class KeyRotationTest extends TestCase
         return null !== $verifier->authenticate(Request::create('/', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]));
     }
 
-    public function testTheOldKeyStaysPublishedForOneRotationAndThenGoes(): void
+    private int $clock = 1_000_000;
+
+    protected function setUp(): void
     {
-        $issuer = new TokenIssuer(new InMemoryKeySet(SigningKey::generate()), 'https://idp.test', 'demo-api');
+        if (!\function_exists('apcu_enabled') || !apcu_enabled()) {
+            self::markTestSkipped('APCu is not enabled for the CLI (apc.enable_cli=1).');
+        }
+        apcu_clear_cache();
+    }
+
+    private function issuer(): TokenIssuer
+    {
+        return new TokenIssuer(new ApcuKeyStore(fn(): int => $this->clock), 'https://idp.test', 'demo-api');
+    }
+
+    public function testASignedTokenStaysGoodThroughRotationsAndTheOldKeyGoesWhenTheTokenHasExpired(): void
+    {
+        $issuer = $this->issuer();
         $beforeRotation = $issuer->issue(TokenKind::Valid);
         $firstKid = $issuer->jwks()['keys'][0]['kid'];
         self::assertTrue($this->accepted($issuer, $beforeRotation));
 
+        $this->clock += 10;
+        $issuer->rotate();
+        $this->clock += 10;
+        $issuer->rotate();
+        $this->clock += 10;
         $issuer->rotate();
         self::assertContains($firstKid, array_column($issuer->jwks()['keys'], 'kid'));
-        self::assertTrue($this->accepted($issuer, $beforeRotation), 'a token signed before the rotation is still good');
+        self::assertTrue($this->accepted($issuer, $beforeRotation), 'a token signed before the rotations is still good, however many there were');
         self::assertTrue($this->accepted($issuer, $issuer->issue(TokenKind::Valid)), 'and so is one signed with the new key');
 
-        $issuer->rotate();
+        $this->clock += 400; // longer than a token lives
         self::assertNotContains($firstKid, array_column($issuer->jwks()['keys'], 'kid'));
-        self::assertFalse($this->accepted($issuer, $beforeRotation), 'two rotations later the first key is gone');
+    }
+
+    public function testRotationsCloserThanTheMinimumIntervalAreOne(): void
+    {
+        $issuer = $this->issuer();
+        $beforeRotation = $issuer->issue(TokenKind::Valid);
+        $this->clock += 10;
+        $first = $issuer->rotate();
+
+        $second = $issuer->rotate(); // the double click
+        $this->clock += ApcuKeyStore::MIN_INTERVAL_SECONDS - 1;
+        $third = $issuer->rotate();
+
+        self::assertSame($first->id, $second->id);
+        self::assertSame($first->id, $third->id);
+        self::assertCount(2, $issuer->jwks()['keys'], 'the key that signed the earlier token and the new one');
+        self::assertTrue($this->accepted($issuer, $beforeRotation));
     }
 }

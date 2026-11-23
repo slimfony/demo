@@ -110,3 +110,74 @@ test('the live numbers and the batch list fill in', async ({ page }) => {
   await expect(page.locator('#batch-rows tr').first()).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('#kpi-total')).not.toHaveText('–');
 });
+
+test('choices that rule each other out are set for the visitor, with the reason', async ({ page }) => {
+  await page.goto('/');
+  const lock = page.locator('#run-form select[name="lock_order"]');
+  await page.locator('#run-form select[name="lock_order"]').selectOption('appearance');
+  await page.locator('#run-form select[name="mode"]').selectOption('strict');
+  await expect(lock).toBeDisabled();
+  await expect(lock).toHaveValue('sorted');
+  await expect(page.locator('#run-hint')).toContainText('sorted order');
+
+  await page.locator('#upload-form select[name="kind"]').selectOption('sandbox');
+  await expect(page.locator('#upload-form select[name="mode"]')).toBeDisabled();
+  await expect(page.locator('#upload-hint')).toContainText('keeps the good ones');
+});
+
+test('an import that is not accepted says so and gives the button back', async ({ page }) => {
+  await page.route('**/api/import/runs', (route) => (route.request().method() === 'POST' ? route.fulfill({ status: 500, json: {} }) : route.continue()));
+  await page.goto('/');
+  await page.locator('#run-start').click();
+  await expect(page.locator('#run-note')).toContainText('The import was not started');
+  await expect(page.locator('#run-start')).toBeEnabled();
+  await expect(page.locator('#run-result')).toBeHidden();
+});
+
+test('a run in which every ZIP was refused is shown as failed, not as done', async ({ page }) => {
+  await page.goto('/');
+  await page.route('**/api/import/runs', (route) => (route.request().method() === 'POST' ? route.fulfill({ status: 202, json: {} }) : route.continue()));
+  const at = Math.floor(Date.now() / 1000);
+  const items = Array.from({ length: 50 }, (_, idx) => ({ idx, http_status: 401, via: 'jwt' }));
+  await page.route('**/api/import/runs/latest', (route) => route.fulfill({ json: { run: { status: 'uploaded', zips: 50, created_at: at }, items, at } }));
+  await page.locator('#run-form select[name="zips"]').selectOption('50');
+  await page.locator('#run-start').click();
+
+  await expect(page.locator('#run-result')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#run-result')).toHaveClass(/bad/);
+  await expect(page.locator('#r-title')).toContainText('every ZIP was refused');
+  await expect(page.locator('#r-problem')).toContainText('the token was not accepted');
+  await expect(page.locator('#run-start')).toBeEnabled();
+});
+
+test('the chaos buttons ask first, and are switched off when the server has no chaos', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/chaos/**', (route) => { calls += 1; return route.fulfill({ status: 404, json: {} }); });
+  await page.goto('/');
+  const kill = page.locator('#chaos-kill');
+  await kill.click();
+  await expect(kill).toContainText('for everyone?');
+  expect(calls).toBe(0);
+
+  await kill.click();
+  await expect(page.locator('#chaos-note')).toContainText('turned off');
+  await expect(kill).toBeDisabled();
+  await expect(page.locator('#chaos-cut')).toBeDisabled();
+});
+
+test('"Send requests" that is not accepted says so, and the empty batch list says it is empty', async ({ page }) => {
+  await page.route('**/api/load/runs', (route) => (route.request().method() === 'POST' ? route.fulfill({ status: 500, json: {} }) : route.continue()));
+  await page.route('**/api/batches*', (route) => route.fulfill({ json: { batches: [] } }));
+  await page.goto('/');
+  await page.locator('#push-start').click();
+  await expect(page.locator('#push-note')).toContainText('The requests were not started');
+  await expect(page.locator('#push-start')).toBeEnabled();
+  await expect(page.locator('#batch-rows')).toContainText('No ZIP files yet');
+});
+
+test('a server that stops answering is announced next to the live numbers', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#kpi-total')).not.toHaveText('–');
+  await page.route('**/api/stats', (route) => route.abort());
+  await expect(page.locator('#live .conn-note')).toContainText('not answering', { timeout: 15_000 });
+});

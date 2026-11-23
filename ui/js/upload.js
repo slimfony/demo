@@ -1,12 +1,5 @@
-// What the api answered, in words a visitor understands.
-const OUTCOMES = {
-  202: 'Accepted',
-  400: 'Refused: the request was not valid',
-  401: 'Refused: the token was not accepted',
-  403: 'Refused: the token has no permission to import',
-  413: 'Refused: the file is too large',
-  422: 'Refused: the file is not an acceptable ZIP',
-};
+import { values, withBusy } from './controls.js';
+import { describeStatus } from './words.js';
 
 const SENDERS = {
   sandbox: 'Anonymous sandbox',
@@ -17,14 +10,19 @@ const SENDERS = {
   missing_scope: 'Token without permission',
 };
 
+// a failure whose message is meant for the visitor
+const known = (message) => Object.assign(new Error(message), { known: true });
+
 async function tokenFor(kind) {
   const response = await fetch(`/api/demo-token?kind=${kind}`, { method: 'POST', cache: 'no-store' });
-  if (!response.ok) throw new Error('The identity provider did not answer.');
+  if (!response.ok) throw known('The identity provider did not answer.');
   return (await response.json()).token;
 }
 
 async function send(kind, mode) {
-  const sample = await (await fetch('/api/sample.zip?files=10', { cache: 'no-store' })).blob();
+  const sampleResponse = await fetch('/api/sample.zip?files=10', { cache: 'no-store' });
+  if (!sampleResponse.ok) throw known(`The API could not make a sample ZIP (HTTP ${sampleResponse.status}).`);
+  const sample = await sampleResponse.blob();
   if ('sandbox' === kind) {
     return fetch('/public/drop', { method: 'POST', body: sample });
   }
@@ -32,14 +30,11 @@ async function send(kind, mode) {
   return fetch(`/api/imports?mode=${mode}`, { method: 'POST', body: sample, headers: { Authorization: `Bearer ${await tokenFor(kind)}` } });
 }
 
-function row(kind, status, detail) {
+function row(label, ok, text) {
   const item = document.createElement('div');
-  const label = document.createElement('dt');
-  label.textContent = SENDERS[kind];
-  const result = document.createElement('dd');
-  result.className = 202 === status ? 'ok' : 'bad';
-  result.textContent = `${OUTCOMES[status] ?? `Refused (${status})`}${detail}`;
-  item.append(label, result);
+  const term = Object.assign(document.createElement('dt'), { textContent: label });
+  const result = Object.assign(document.createElement('dd'), { className: ok ? 'ok' : 'bad', textContent: text });
+  item.append(term, result);
 
   return item;
 }
@@ -47,42 +42,48 @@ function row(kind, status, detail) {
 export function setupUpload() {
   const form = document.getElementById('upload-form');
   const button = document.getElementById('upload-start');
+  const rotate = document.getElementById('upload-rotate');
   const results = document.getElementById('upload-results');
 
-  document.getElementById('upload-rotate').addEventListener('click', async () => {
-    const item = document.createElement('div');
-    const label = Object.assign(document.createElement('dt'), { textContent: 'Identity provider' });
-    const result = document.createElement('dd');
+  function show(item) {
+    results.prepend(item);
+    results.hidden = false;
+    while (results.children.length > 6) results.lastElementChild.remove();
+  }
+
+  rotate.addEventListener('click', () => withBusy(rotate, 'Rotating…', async () => {
     try {
       const response = await fetch('/api/demo-rotate', { method: 'POST', cache: 'no-store' });
       if (!response.ok) throw new Error('refused');
       const { kid } = await response.json();
-      result.className = 'ok';
-      result.textContent = `Now signing with key ${kid.slice(0, 8)}. The next token carries it; the API fetches the new key list when it first sees it. Tokens signed before still work.`;
+      show(row('Identity provider', true, `Now signing with key ${kid.slice(0, 8)}, for every visitor. The next token carries it; the API fetches the new key list when it first sees it. Tokens signed before still work.`));
     } catch {
-      result.className = 'bad';
-      result.textContent = 'The identity provider did not answer.';
+      show(row('Identity provider', false, 'The identity provider did not answer.'));
     }
-    item.append(label, result);
-    results.prepend(item);
-    results.hidden = false;
-  });
+  }));
+
+  // the anonymous sandbox takes no mode: it always keeps the good ones
+  const hint = document.getElementById('upload-hint');
+  function sync() {
+    const sandbox = 'sandbox' === form.elements.kind.value;
+    form.elements.mode.disabled = sandbox;
+    if (sandbox) form.elements.mode.value = 'partial';
+    hint.textContent = sandbox ? 'The anonymous sandbox always keeps the good ones.' : '';
+  }
+  form.addEventListener('change', sync);
+  sync();
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const { kind, mode } = Object.fromEntries(new FormData(form));
-    button.disabled = true;
-    try {
-      const response = await send(kind, mode);
-      const body = await response.json().catch(() => ({}));
-      const detail = body.id ? `, batch ${body.id.slice(0, 8)}` : '';
-      results.prepend(row(kind, response.status, detail));
-    } catch {
-      results.prepend(row(kind, 0, ''));
-    } finally {
-      button.disabled = false;
-      results.hidden = false;
-      while (results.children.length > 6) results.lastElementChild.remove();
-    }
+    const { kind, mode } = values(form);
+    await withBusy(button, 'Sending…', async () => {
+      try {
+        const response = await send(kind, mode);
+        const body = await response.json().catch(() => ({}));
+        show(row(SENDERS[kind], 202 === response.status, `${describeStatus(response.status)}${body.id ? `, batch ${body.id.slice(0, 8)}` : ''}`));
+      } catch (error) {
+        show(row(SENDERS[kind], false, error.known ? error.message : `${describeStatus(0)}.`));
+      }
+    });
   });
 }

@@ -81,7 +81,7 @@
             <option value="0.1">10 in 100</option>
           </select>
         </label>
-        <label>When one is wrong
+        <label>If a statement is wrong
           <select name="mode">
             <option value="partial" selected>Keep the good ones</option>
             <option value="strict">Roll back the whole ZIP (slower)</option>
@@ -101,21 +101,25 @@
         </label>
         <button type="submit" id="run-start" class="button"><span>Start import</span></button>
       </form>
+      <p class="note" id="run-hint"></p>
+      <p class="note bad" id="run-note" role="alert"></p>
 
-      <div class="progress" aria-hidden="true"><div class="progress-bar" id="run-bar"></div></div>
-      <p class="run-line" aria-live="polite">Uploaded <b id="p-uploaded">0</b> of <b id="p-total">0</b> · imported <b id="p-imported">0</b></p>
+      <div class="progress" role="progressbar" aria-label="Import progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="run-progress"><div class="progress-bar" id="run-bar"></div></div>
+      <p class="run-line">Uploaded <b id="p-uploaded">0</b> of <b id="p-total">0</b> · imported <b id="p-imported">0</b><span id="p-refused-part" hidden> · refused <b id="p-refused">0</b></span></p>
+      <p class="sr-only" id="run-status" role="status"></p>
 
       <div id="run-tiles" class="tiles" role="img" aria-label="One tile for every ZIP file, coloured by what happened to it"></div>
+      <p class="muted tile-summary" id="tile-summary"></p>
       <ul class="legend" aria-label="What the tiles mean">
         <li class="legend-title">Colour: what happened to the ZIP</li>
         <li><i class="swatch queued"></i>waiting</li>
         <li><i class="swatch running"></i>importing</li>
         <li><i class="swatch done"></i>booked</li>
-        <li><i class="swatch problems"></i>booked, some rejected</li>
+        <li><i class="swatch problems"></i>booked, some statements rejected</li>
         <li><i class="swatch failed"></i>rolled back</li>
         <li><i class="swatch refused"></i>refused</li>
         <li class="legend-title">Shield: how it was uploaded</li>
-        <li><i class="swatch shield"></i>with an access token</li>
+        <li><i class="swatch shield"></i>with a token</li>
       </ul>
 
       <div class="numbers run-numbers">
@@ -123,16 +127,19 @@
         <div><span class="num" id="s-rejected">0</span><span class="cap">statements rejected</span></div>
         <div><span class="num" id="s-rolled">0</span><span class="cap">good ones rolled back</span></div>
         <div><span class="num" id="s-retries">0</span><span class="cap">deadlock retries</span></div>
-        <div><span class="num" id="s-rate">0</span><span class="cap">statements per second</span></div>
+        <div><span class="num" id="s-rate">0</span><span class="cap">statements booked per second</span></div>
       </div>
 
       <div class="chaos">
         <p class="muted">Break something while an import runs and watch it finish anyway:</p>
-        <p class="chaos-buttons"><button type="button" id="chaos-kill" class="small">Kill an importer</button> <button type="button" id="chaos-cut" class="small">Cut the database connections</button></p>
+        <p class="chaos-buttons"><button type="button" id="chaos-kill" class="small danger"><span>Kill an importer</span></button> <button type="button" id="chaos-cut" class="small danger"><span>Cut the database connections</span></button></p>
+        <p class="muted">These affect every visitor of this demo. Press once to arm, again to confirm.</p>
+        <p class="muted" id="chaos-pending"></p>
         <p class="muted" id="chaos-note" role="status"></p>
       </div>
       <div id="run-result" class="result" hidden>
-        <h3>Done in <span id="r-time">–</span></h3>
+        <h3><svg class="icon" aria-hidden="true"><use id="r-icon" href="/vendor/lucide/sprite.svg#shield-check"/></svg><span id="r-title">–</span></h3>
+        <p class="note bad" id="r-problem"></p>
         <dl class="list">
           <div><dt>ZIP files</dt><dd id="r-zips">–</dd></div>
           <div><dt>Statements booked</dt><dd><span id="r-booked">–</span> <span class="muted" id="r-statements-rate"></span></dd></div>
@@ -166,7 +173,7 @@
       </details>
     </section>
     <section class="wrap block" id="push" aria-labelledby="push-title">
-      <h2 id="push-title">Try it</h2>
+      <h2 id="push-title">Send requests</h2>
       <p class="sub">The server sends the requests as fast as it can, over six connections like a browser, and the charts below react. A reload of the page does not stop it. This is a taste; the real load test uses k6.</p>
 
       <form id="push-form" class="form">
@@ -186,14 +193,16 @@
         <button type="submit" id="push-start" class="button"><span>Send requests</span></button>
       </form>
 
-      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="push-progress"><div class="progress-bar" id="push-bar"></div></div>
+      <p class="note bad" id="push-note" role="alert"></p>
+
+      <div class="progress" role="progressbar" aria-label="Request progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="push-progress"><div class="progress-bar" id="push-bar"></div></div>
 
       <dl class="list" id="push-results" hidden>
         <div><dt>Sent</dt><dd id="res-done">–</dd></div>
         <div><dt>Throughput</dt><dd id="res-rps">–</dd></div>
-        <div><dt>Median</dt><dd id="res-p50">–</dd></div>
-        <div><dt>95th percentile</dt><dd id="res-p95">–</dd></div>
-        <div><dt>99th percentile</dt><dd id="res-p99">–</dd></div>
+        <div><dt>Median (p50)</dt><dd id="res-p50">–</dd></div>
+        <div><dt>p95</dt><dd id="res-p95">–</dd></div>
+        <div><dt>p99</dt><dd id="res-p99">–</dd></div>
         <div><dt>Errors</dt><dd id="res-errors">–</dd></div>
       </dl>
     </section>
@@ -213,15 +222,16 @@
             <option value="missing_scope">Token without permission</option>
           </select>
         </label>
-        <label>If a statement fails
+        <label>If a statement is wrong
           <select name="mode">
             <option value="partial" selected>Keep the good ones</option>
             <option value="strict">Roll back the whole ZIP (slower)</option>
           </select>
         </label>
         <button type="submit" id="upload-start" class="button"><span>Send ZIP</span></button>
-        <button type="button" id="upload-rotate" class="button secondary"><span>Rotate the signing key</span></button>
+        <button type="button" id="upload-rotate" class="button secondary"><span>Rotate the signing key for everyone</span></button>
       </form>
+      <p class="note" id="upload-hint"></p>
 
       <dl class="list" id="upload-results" hidden aria-live="polite"></dl>
     </section>
@@ -229,41 +239,43 @@
     <section class="wrap block keep" id="live" aria-labelledby="live-title">
       <h2 id="live-title">Live</h2>
       <p class="sub">Prometheus reads the API and the importers every two seconds.</p>
+      <p class="conn-note" role="status" hidden></p>
 
-      <div class="numbers">
+      <div class="numbers" data-stale-when-api-down>
         <div><span class="num" id="kpi-rps">–</span><span class="cap">API requests per second</span></div>
         <div><span class="num" id="kpi-p99">–</span><span class="cap">API p99, time inside the app</span></div>
         <div><span class="num" id="kpi-total">–</span><span class="cap">API requests served</span></div>
       </div>
-      <div class="numbers">
+      <div class="numbers" data-stale-when-api-down>
         <div><span class="num" id="kpi-sps">–</span><span class="cap">statements booked per second</span></div>
         <div><span class="num" id="kpi-waiting">–</span><span class="cap">ZIPs waiting or being imported</span></div>
         <div><span class="num" id="kpi-retries">–</span><span class="cap">deadlocks run again, in total</span></div>
       </div>
-      <div class="numbers">
+      <div class="numbers" data-stale-when-api-down>
         <div><span class="num" id="kpi-memory">–</span><span class="cap">memory of the server process</span></div>
         <div><span class="num" id="kpi-busy">–</span><span class="cap">PHP workers busy</span></div>
         <div><span class="num" id="kpi-gc">–</span><span class="cap">garbage collector runs, in total</span></div>
       </div>
 
-      <div class="charts">
-        <figure><div id="chart-rps" class="chart" role="img" aria-label="Requests per second, last two minutes"></div><figcaption>Requests per second</figcaption></figure>
-        <figure><div id="chart-p99" class="chart" role="img" aria-label="p99 latency, last two minutes"></div><figcaption>API p99 in microseconds</figcaption></figure>
+      <div class="charts" data-stale-when-api-down>
+        <figure><div id="chart-rps" class="chart" role="img" aria-label="Requests per second, last two minutes"></div><figcaption><i class="swatch series-1"></i>API requests per second</figcaption></figure>
+        <figure><div id="chart-p99" class="chart" role="img" aria-label="p99 latency, last two minutes"></div><figcaption><i class="swatch series-1"></i>API p99, time inside the app</figcaption></figure>
       </div>
-      <div class="charts">
-        <figure><div id="chart-sps" class="chart" role="img" aria-label="Statements booked per second, last two minutes"></div><figcaption>Statements booked per second</figcaption></figure>
-        <figure><div id="chart-import-p95" class="chart" role="img" aria-label="Import time of a ZIP, p95, last two minutes"></div><figcaption>Time to import a ZIP, p95 in milliseconds</figcaption></figure>
+      <div class="charts" data-stale-when-api-down>
+        <figure><div id="chart-sps" class="chart" role="img" aria-label="Statements booked per second, last two minutes"></div><figcaption><i class="swatch series-1"></i>Statements booked per second</figcaption></figure>
+        <figure><div id="chart-import-p95" class="chart" role="img" aria-label="Import time of a ZIP, p95, last two minutes"></div><figcaption><i class="swatch series-1"></i>Time to import a ZIP, p95</figcaption></figure>
       </div>
-      <div class="charts">
-        <figure><div id="chart-gc" class="chart" role="img" aria-label="Cycles freed by the garbage collector per second, last two minutes"></div><figcaption>Garbage collector: cycles freed per second<span id="gc-note" hidden> · it has not run: this code leaves no cycles to collect</span></figcaption></figure>
-        <figure><div id="chart-workers" class="chart" role="img" aria-label="Memory of the server process and busy PHP workers, last two minutes"></div><figcaption>Memory of the server process in MB (blue) and busy PHP workers (orange)</figcaption></figure>
+      <div class="charts" data-stale-when-api-down>
+        <figure><div id="chart-gc" class="chart" role="img" aria-label="Cycles freed by the garbage collector per second, last two minutes"></div><figcaption><i class="swatch series-1"></i>Garbage collector: cycles freed per second<span id="gc-note" hidden> · it has not run: this code leaves no cycles to collect</span></figcaption></figure>
+        <figure><div id="chart-workers" class="chart" role="img" aria-label="Memory of the server process and busy PHP workers, last two minutes"></div><figcaption><i class="swatch series-1"></i>Memory of the server process in MiB, left axis · <i class="swatch series-2"></i>busy PHP workers, right axis</figcaption></figure>
       </div>
     </section>
 
     <section class="wrap block" id="batches" aria-labelledby="batches-title">
       <h2 id="batches-title">Batches</h2>
       <p class="sub">The latest ZIP files, newest first.</p>
-      <div class="table-wrap">
+      <p class="conn-note" role="status" hidden></p>
+      <div class="table-wrap" data-stale-when-api-down>
         <table class="table">
           <thead><tr><th>ZIP</th><th>Sent</th><th>Mode</th><th>Result</th><th>Booked / rejected</th><th>Time</th></tr></thead>
           <tbody id="batch-rows"></tbody>
@@ -280,7 +292,7 @@
     </section>
   </main>
 
-  <aside id="tour" class="tour" role="dialog" aria-label="Guided tour" hidden>
+  <aside id="tour" class="tour" role="dialog" aria-modal="true" aria-label="Guided tour" hidden>
     <p class="tour-step" id="tour-step"></p>
     <h3 id="tour-title"></h3>
     <p id="tour-text"></p>

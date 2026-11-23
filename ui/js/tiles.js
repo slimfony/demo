@@ -1,14 +1,9 @@
 // The grid of tiles: one per ZIP. A tile shows where its ZIP is: queued, being imported, booked, booked with problems,
 // rolled back, or refused at the door. A tile with a shield was uploaded with a verified token.
-const STATES = ['queued', 'running', 'done', 'problems', 'failed', 'refused'];
-const LABELS = {
-  queued: 'waiting for an importer',
-  running: 'being imported',
-  done: 'booked',
-  problems: 'booked, some statements rejected',
-  failed: 'rolled back',
-  refused: 'refused by the API',
-};
+import { formatMilliseconds } from './format.js';
+import { SENDERS, STATES as LABELS, stateOf } from './words.js';
+
+const STATES = Object.keys(LABELS);
 
 export function createTiles(root) {
   let tiles = [];
@@ -16,7 +11,7 @@ export function createTiles(root) {
 
   function paint(tile, state, extra = '') {
     for (const name of STATES) tile.classList.toggle(name, name === state);
-    const via = tile.classList.contains('jwt') ? 'with a token' : 'anonymous sandbox';
+    const via = SENDERS[tile.classList.contains('jwt') ? 'jwt' : 'public'].toLowerCase();
     tile.title = `ZIP ${tile.dataset.n}, ${via}: ${LABELS[state]}${extra}`;
   }
 
@@ -31,6 +26,12 @@ export function createTiles(root) {
         return tile;
       });
       root.replaceChildren(...tiles);
+    },
+    /** How many tiles are in each state, for the text under the tiles (colour alone says nothing to some readers). */
+    counts() {
+      const counts = Object.fromEntries(STATES.map((name) => [name, 0]));
+      for (const tile of tiles) counts[STATES.find((name) => tile.classList.contains(name)) ?? 'queued'] += 1;
+      return counts;
     },
     /** The API took ZIP number `index`: it is waiting now. */
     accepted(index, id, withToken) {
@@ -50,7 +51,7 @@ export function createTiles(root) {
       if ('running' === event.state) {
         paint(tile, 'running', `, importer ${event.worker}`);
       } else if ('done' === event.state) {
-        paint(tile, event.failed > 0 ? 'problems' : 'done', `: ${event.ok} booked, ${event.failed} rejected, ${event.ms} ms`);
+        paint(tile, event.failed > 0 ? 'problems' : 'done', `: ${event.ok} booked, ${event.failed} rejected, ${formatMilliseconds(event.ms)}`);
       } else {
         paint(tile, 'failed', `: ${event.failed} rejected, ${event.rolled_back} good ones rolled back with them`);
       }
@@ -61,7 +62,7 @@ export function createTiles(root) {
       const tile = byId.get(row.id);
       if (!tile) return false;
       if ('running' === row.status) paint(tile, 'running', row.worker ? `, importer ${row.worker}` : '');
-      else if ('done' === row.status) paint(tile, row.statements_failed > 0 ? 'problems' : 'done', `: ${row.statements_ok} booked, ${row.statements_failed} rejected`);
+      else if ('done' === row.status) paint(tile, stateOf(row), `: ${row.statements_ok} booked, ${row.statements_failed} rejected`);
       else if ('failed' === row.status) paint(tile, 'failed', `: ${row.statements_failed} rejected, ${row.statements_rolled_back} good ones rolled back with them`);
       else paint(tile, 'queued');
       return true;

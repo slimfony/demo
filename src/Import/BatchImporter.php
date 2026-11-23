@@ -60,17 +60,21 @@ final class BatchImporter
     }
 
     /**
+     * @param (\Closure(): void)|null $claimed called once the batch is this worker's, before any work (not for a repeated delivery)
+     *
      * @return ImportResult|null null when the batch was not waiting for this worker (a repeated delivery)
      */
-    public function import(string $batchId, string $worker): ?ImportResult
+    public function import(string $batchId, string $worker, ?\Closure $claimed = null): ?ImportResult
     {
         $batch = $this->timed('claim', fn(): ?array => $this->batches->claim($batchId, $worker));
         if (null === $batch) {
             return null;
         }
-        $this->chaos->strike(); // normally nothing; the demo's chaos switch can kill this process right here
 
         try {
+            $claimed?->__invoke();
+            $this->chaos->strike(); // normally nothing; the demo's chaos switch can kill this process right here
+
             return $this->run($batchId, $batch);
         } catch (\Throwable $e) { // for example a deadlock that outlasted every retry: the broker will deliver the message again
             $this->batches->release($batchId);
@@ -100,7 +104,7 @@ final class BatchImporter
         try {
             $files = $this->timed('unzip', fn(): array => $this->archives->read($batch['bytes'], $source->limits()));
         } catch (RejectedUpload $e) {
-            $this->batches->recordError($batchId, new StatementRejected($e->reason, '*', $e->getMessage()));
+            $this->batches->recordErrors($batchId, [new StatementRejected($e->reason, '*', $e->getMessage())]);
             $this->batches->finish($batchId, ImportResult::FAILED, 0);
 
             return new ImportResult($batchId, $mode->value, $source->value, ImportResult::FAILED, 0, 0, 0, 0, (hrtime(true) - $started) / 1e9, [$e->reason => 1]);
@@ -128,9 +132,7 @@ final class BatchImporter
             : $this->partial($batchId, $statements, $errors, $order));
 
         $finishStart = hrtime(true);
-        foreach ($errors as $error) {
-            $this->batches->recordError($batchId, $error); // outside every transaction: the rows survive the rollbacks above
-        }
+        $this->batches->recordErrors($batchId, $errors); // outside every transaction: the rows survive the rollbacks above
         $failed = \count(array_filter($errors, static fn(StatementRejected $e): bool => StatementRejected::ROLLED_BACK !== $e->reason));
         $status = ImportMode::Strict === $mode && $failed > 0 ? ImportResult::FAILED : ImportResult::DONE;
         $this->batches->finish($batchId, $status, $failed);

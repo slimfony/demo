@@ -20,6 +20,11 @@ final class RunRepository
      */
     public function create(Connection $connection, string $id, int $zips, float $faultRate, ImportMode $mode, int $accounts, LockOrder $lockOrder): bool
     {
+        // Checking and inserting are two statements: a lock held until the end of the transaction makes concurrent creators take turns,
+        // and the one that cannot get it is told a run is going (the other one is just starting it).
+        if (true !== $connection->fetchOne("SELECT pg_try_advisory_xact_lock(hashtext('import_runs'))")) {
+            return false;
+        }
         $busy = $connection->fetchOne(
             "SELECT 1 FROM import_runs WHERE status <> 'uploaded' AND created_at > now() - make_interval(secs => ?)",
             [self::STALE_SECONDS],
